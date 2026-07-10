@@ -1,0 +1,35 @@
+name: Deploy
+
+on:
+    push:
+        branches:
+        - main
+
+jobs:
+    deploy:
+
+        runs-on: ubuntu-latest
+
+        steps:
+
+            -   name: Checkout
+                uses: actions/checkout@v4
+
+            -   name: Deploy
+                uses: appleboy/ssh-action@v1.2.2
+
+                with:
+                    host: ${{ secrets.HOST }}
+                    username: ${{ secrets.USERNAME }}
+                    key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+                    script: |
+                        cd /home/ubuntu/coco-seal-server
+
+                        git pull
+
+                        source .venv/bin/activate
+
+                        pip install -r requirements.txt
+
+                        sudo systemctl restart coco-seal-server.service

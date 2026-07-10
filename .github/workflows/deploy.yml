@@ -30,6 +30,6 @@ jobs:
 
                         source .venv/bin/activate
 
-                        pip install -r requirements.txt
+                        python -m pip install -r requirements.txt
 
-                        systemctl --user restart coco-seal-server.service
+                        sudo systemctl restart coco-seal-server.service

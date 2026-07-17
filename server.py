@@ -3,6 +3,7 @@ from firebase_admin import credentials, messaging
 from fastapi import FastAPI
 from pydantic import BaseModel
 from routers import users, devices
+from database.connection import get_connection
 
 app = FastAPI(
     title="Coco Seal API",
@@ -12,3 +13,5 @@ app = FastAPI(
 
 app.include_router(users.router)
 app.include_router(devices.router)
+
+get_connection()

@@ -1,3 +1,12 @@
+-- 作り直しコマンド
+-- psql -U coco_seal_user -d coco_seal_db -f ./database/schema.sql -h localhost
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+GRANT ALL ON SCHEMA public TO coco_seal_user;
+ALTER SCHEMA public OWNER TO coco_seal_user;
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+
 -- シール
 
 CREATE TABLE seal_rarities (
@@ -24,7 +33,20 @@ CREATE TABLE seals (
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    firebase_uid TEXT NOT NULL UNIQUE
+    firebase_uid TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL,
+    display_name TEXT NOT NULL
+);
+
+CREATE TABLE user_notify_token (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    notify_token TEXT NOT NULL,
+
+    CONSTRAINT notify_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
 );
 
 
@@ -65,7 +87,7 @@ CREATE TABLE device_seals (
 
     CONSTRAINT device_seals_status
         FOREIGN KEY (status_id)
-        REFERENCES seal_statuses(id)
+        REFERENCES seal_statuses(id),
     
     CONSTRAINT device_seals_device
         FOREIGN KEY (device_id)

@@ -12,6 +12,7 @@ class User(BaseModel):
     display_name: str
     email: str
     firebase_uid: str
+    notify_tokens: list[str]
 
 class DeviceInfoUpdateRequest(BaseModel):
     device_id: str

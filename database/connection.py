@@ -32,7 +32,7 @@ def get_or_create_user(db: psycopg.Connection, firebase_uid: str, email: str, na
                 DO UPDATE SET firebase_uid = EXCLUDED.firebase_uid
                 RETURNING id, firebase_uid, email, display_name;
             """,
-            (firebase_uid, email, name)
+            (firebase_uid, email or "", name or "")
         )
         user_row = cur.fetchone()
         assert user_row is not None

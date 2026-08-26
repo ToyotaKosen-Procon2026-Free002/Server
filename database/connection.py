@@ -78,11 +78,11 @@ def update_user(db: psycopg.Connection, update_user: UpdateUser, current_user: U
         assert user_row is not None
 
         cur.execute(
-            "SELECT token_value FROM user_notify_token WHERE user_id = %s;",
+            "SELECT notify_token FROM user_notify_token WHERE user_id = %s;",
             (user_row["id"],)
         )
         token_rows = cur.fetchall()
-        notify_tokens = [t["token_value"] for t in token_rows]
+        notify_tokens = [t["notify_token"] for t in token_rows]
 
         db.commit()
 

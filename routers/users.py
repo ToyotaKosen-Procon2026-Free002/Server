@@ -19,7 +19,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
     """
     Firebase Authenticationで認証されたユーザーの情報を取得します。
     """
-    raise NotImplementedError()
+    return current_user
 
 
 

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 # 汎用
 
@@ -17,6 +18,10 @@ class User(BaseModel):
 class DeviceInfoUpdateRequest(BaseModel):
     device_id: str
     device_display_name: str
+
+class UpdateUser(BaseModel):
+    display_name: Optional[str] = None
+    email: Optional[str] = None
 
 
 # 主に親機や子機との通信に使用される

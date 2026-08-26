@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends
+from typing import Annotated
 from auth import get_current_user
-from models import User
+from models import User, UpdateUser
+from database.connection import get_connection, update_user
+import psycopg
 
 router = APIRouter(
     prefix="/users",
@@ -28,8 +31,9 @@ async def get_me(current_user: User = Depends(get_current_user)):
     summary="現在ログイン中のユーザー情報を更新",
     response_model=User
 )
-async def update_me(update_user: User, current_user: User = Depends(get_current_user)):
+async def update_me(_update_user: UpdateUser, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)):
     """
     Firebase Authenticationで認証されたユーザーの情報を更新します。
     """
-    raise NotImplementedError()
+
+    return update_user(db, _update_user, current_user)

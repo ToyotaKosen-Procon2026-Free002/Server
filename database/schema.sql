@@ -1,10 +1,6 @@
 -- 作り直しコマンド
+-- sudo -u postgres psql -d coco_seal_db -c "DROP SCHEMA public CASCADE;CREATE SCHEMA public;GRANT ALL ON SCHEMA public TO coco_seal_user;ALTER SCHEMA public OWNER TO coco_seal_user;CREATE EXTENSION IF NOT EXISTS postgis;"
 -- psql -U coco_seal_user -d coco_seal_db -f ./database/schema.sql -h localhost
-DROP SCHEMA public CASCADE;
-CREATE SCHEMA public;
-GRANT ALL ON SCHEMA public TO coco_seal_user;
-ALTER SCHEMA public OWNER TO coco_seal_user;
-CREATE EXTENSION IF NOT EXISTS postgis;
 
 
 -- シール

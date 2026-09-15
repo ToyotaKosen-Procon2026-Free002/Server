@@ -139,7 +139,7 @@ CREATE TABLE encounters (
     synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     send_seal_id UUID NULL,
-    receive_seal_id UUID NOT NULL,
+    receive_seal_id UUID NULL,
 
     CONSTRAINT encounters_device
         FOREIGN KEY (device_id)

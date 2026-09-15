@@ -2,3 +2,4 @@ fastapi
 firebase_admin
 uvicorn
 psycopg
+cryptography

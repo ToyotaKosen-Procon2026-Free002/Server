@@ -73,7 +73,7 @@ def update_user(db: psycopg.Connection, update_user: UpdateUser, current_user: U
             UPDATE users
             SET
                 display_name = COALESCE(%s, display_name),
-                email = COALESCE(%s, email)
+                email = COALESCE(%s, email),
                 roll = COALESCE(%s, roll)
             WHERE firebase_uid = %s
             RETURNING id, firebase_uid, COALESCE(email, '') AS email, COALESCE(display_name, '') AS display_name, COALESCE(roll, '') AS roll;

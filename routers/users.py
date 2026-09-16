@@ -72,7 +72,7 @@ async def get_device_seals(device_id: str, current_user: User = Depends(get_curr
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定されたデバイスが存在しないか、ユーザーが所持していないデバイスです。")
 
 
-@router.put(
+@router.post(
     "/notify_token",
     summary="ユーザーのプッシュ通知用トークンを通知する",
     response_model=SuccessResponse

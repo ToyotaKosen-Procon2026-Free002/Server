@@ -1,0 +1,1 @@
+sudo journalctl -u coco-seal-server.service -n 100 -f

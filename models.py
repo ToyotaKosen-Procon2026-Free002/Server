@@ -70,6 +70,12 @@ class DeviceInitRequest(BaseModel):
     public_key: bytes = Field(..., description="公開鍵")
     name: Optional[str] = Field(None, description="デバイス名")
 
+
+class GatewayInitRequest(BaseModel):
+    id: str
+    public_key: bytes
+    name: Optional[str] = None
+
 class Device(BaseModel):
     id: str
     owner: Optional[str]

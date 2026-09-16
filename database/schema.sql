@@ -148,11 +148,17 @@ CREATE TABLE gateways (
     name TEXT NOT NULL,
     location GEOGRAPHY(Point, 4326) NOT NULL,
     distribute_seal_id UUID NULL,
+    user_id UUID NULL,
 
     CONSTRAINT gateways_seal
         FOREIGN KEY (distribute_seal_id)
         REFERENCES seals(id)
-        ON DELETE SET NULL
+        ON DELETE SET NULL,
+
+    CONSTRAINT gateways_user_id
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
 );
 
 

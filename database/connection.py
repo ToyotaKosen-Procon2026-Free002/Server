@@ -639,3 +639,33 @@ def get_gateway(db: psycopg.Connection, gateway_id: str) -> Gateway | None:
             longitude=row["longitude"]
         )
     else: return None
+
+
+def get_gateways(db: psycopg.Connection, user: User) -> list[Gateway]:
+    """
+    ユーザーの所有している親機一覧を返す。
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT id, user_id, name, public_key, distribute_seal_id, ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude
+            FROM gateways
+            WHERE user_id;
+            """,
+            (user.id, )
+        )
+        rows = cur.fetchall()
+
+    return [
+        Gateway(
+            id=str(row["id"]),
+            public_key=bytes(row["public_key"]),
+            user_id=str(row["user_id"]),
+            name=row["name"],
+            distribute_seal_id=str(row["distribute_seal_id"]),
+            latitude=row["latitude"],
+            longitude=row["longitude"]
+        )
+        for row in rows
+    ]

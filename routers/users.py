@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
 from auth import get_current_user
-from models import Device, DeviceSeal, Seal, SealPackResponse, SuccessResponse, User, UpdateUser
+from models import Device, DeviceSeal, Gateway, Seal, SealPackResponse, SuccessResponse, User, UpdateUser
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
@@ -154,3 +154,15 @@ async def register_gateway(gateway_id: str, current_user: User = Depends(get_cur
 
     gateway = connection.register_gateway(db, gateway_id, current_user)
     return SuccessResponse(success=True if gateway else False)
+
+
+@router.get(
+    "/gateways",
+    summary="登録済みの親機一覧を取得"
+)
+async def get_gateways(current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Gateway]:
+    """
+    現在ログインしているユーザーに登録されているデバイスの一覧を取得する。
+    """
+
+    return connection.get_gateways(db, current_user)

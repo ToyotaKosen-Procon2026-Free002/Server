@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
 from auth import get_current_user
-from models import DeviceSeal, SealPackResponse, User, UpdateUser
+from models import DeviceSeal, SealPackResponse, SuccessResponse, User, UpdateUser
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
@@ -19,7 +19,7 @@ router = APIRouter(
     summary="現在ログイン中のユーザー情報を取得",
     response_description="プロフィール情報",
 )
-async def get_me(current_user: User = Depends(get_current_user)):
+async def get_me(current_user: User = Depends(get_current_user)) -> User:
     """
     Firebase Authenticationで認証されたユーザーの情報を取得します。
     """
@@ -32,7 +32,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
     summary="現在ログイン中のユーザー情報を更新",
     response_model=User
 )
-async def update_me(_update_user: UpdateUser, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)):
+async def update_me(_update_user: UpdateUser, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> User:
     """
     Firebase Authenticationで認証されたユーザーの情報を更新します。
     """
@@ -70,3 +70,31 @@ async def get_device_seals(device_id: str, current_user: User = Depends(get_curr
         return connection.get_device_seals(db, device)
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定されたデバイスが存在しないか、ユーザーが所持していないデバイスです。")
+
+
+@router.put(
+    "/notify_token",
+    summary="ユーザーのプッシュ通知用トークンを通知する",
+    response_model=SuccessResponse
+)
+async def put_notify_token(token: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
+    """
+    ユーザーのプッシュ通知用トークンを通知する
+    """
+
+    connection.add_notify_token(db, token, current_user)
+    return SuccessResponse(success=True)
+
+
+@router.delete(
+    "/notify_token",
+    summary="ユーザーのプッシュ通知用トークンを削除する",
+    response_model=SuccessResponse
+)
+async def delete_notify_token(token: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
+    """
+    ユーザーのプッシュ通知用トークンを削除する
+    """
+
+    connection.delete_notify_token(db, token, current_user)
+    return SuccessResponse(success=True)

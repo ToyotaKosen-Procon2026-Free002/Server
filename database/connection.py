@@ -471,3 +471,39 @@ def get_device_trading_seals(db: psycopg.Connection, device: Device) -> list[Dev
         )
         for row in rows
     ]
+
+
+def add_notify_token(db: psycopg.Connection, token: str, user: User):
+    """
+    ユーザーにプッシュ通知用トークンを追加する。
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            INSERT INTO user_notify_token (user_id, notify_token)
+            VALUES (%s, %s)
+            ON CONFLICT (notify_token) 
+            DO UPDATE SET user_id = EXCLUDED.user_id;
+            """,
+            (user.id, token)
+        )
+
+    db.commit()
+
+
+def delete_notify_token(db: psycopg.Connection, token: str, user: User):
+    """
+    ユーザーのプッシュ通知用トークンを削除する。
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            DELETE FROM user_notify_token
+            WHERE user_id = %s AND notify_token = %s;
+            """,
+            (user.id, token)
+        )
+
+    db.commit()

@@ -64,7 +64,7 @@ CREATE TABLE users (
 CREATE TABLE user_notify_token (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
-    notify_token TEXT NOT NULL,
+    notify_token TEXT NOT NULL UNIQUE,
 
     CONSTRAINT notify_user
         FOREIGN KEY (user_id)

@@ -87,7 +87,7 @@ def build_comm_message(comm: NearbyCommunication) -> bytes:
     
     # 4. UNIXタイムスタンプ（秒単位整数）
     # time_stamp が timezone 無しの場合は UTC として扱う
-    ts = comm.time_stamp
+    ts = comm.timestamp
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=timezone.utc)
     timestamp_unix = str(int(ts.timestamp()))

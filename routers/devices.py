@@ -3,7 +3,7 @@ import psycopg
 from auth import get_current_device, get_current_user, verify_comm_event_signature, verify_sos_signature
 from database.connection import get_connection, init_new_device, received_sos, update_device_status
 from database import connection
-from models import DeviceInitRequest, User, Device, SuccessResponse, SosRequest, DeviceUpdateRequest
+from models import DeviceInitRequest, DeviceSeal, User, Device, SuccessResponse, SosRequest, DeviceUpdateRequest
 
 
 router = APIRouter(
@@ -95,3 +95,15 @@ async def sos(request: SosRequest, current_device: Device = Depends(get_current_
     received_sos(db, request, child_device)
 
     return SuccessResponse(success=True)
+
+
+@router.get(
+    "/trading_seals",
+    summary="デバイスが交換に出されているシールを取得する"
+)
+async def get_trading_seals(current_device: Device = Depends(get_current_device), db: psycopg.Connection = Depends(get_connection)) -> list[DeviceSeal]:
+    """
+    デバイスが交換に出されているシールを取得する
+    """
+
+    return connection.get_device_trading_seals(db, current_device)

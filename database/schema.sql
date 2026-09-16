@@ -83,6 +83,9 @@ CREATE TABLE devices (
     user_id UUID NULL,
     name TEXT NOT NULL,
     coins INTEGER NOT NULL DEFAULT 0,
+    battery DOUBLE PRECISION NOT NULL DEFAULT 50,
+
+    last_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT devices_user
         FOREIGN KEY (user_id)

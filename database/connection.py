@@ -112,7 +112,7 @@ def init_new_device(db: psycopg.Connection, device_id: str, public_key: bytes, n
             INSERT INTO devices (id, public_key, name)
             VALUES (%s, %s, %s)
             ON CONFLICT (id) DO NOTHING
-            RETURNING id, user_id, name, public_key, coins;
+            RETURNING id, user_id, name, public_key, coins, battery, last_timestamp;
             """,
             (device_id, public_key, name or device_id)
         )
@@ -131,7 +131,9 @@ def init_new_device(db: psycopg.Connection, device_id: str, public_key: bytes, n
             owner=str(device["user_id"]) if device["user_id"] else None,
             public_key=bytes(device["public_key"]),
             name=device["name"],
-            coins=device["coins"]
+            coins=device["coins"],
+            battery=device["battery"],
+            last_timestamp=device["last_timestamp"]
         )
     else: return None
 
@@ -149,7 +151,7 @@ def register_device(db: psycopg.Connection, device_id: str, user: User):
                 UPDATE devices
                 SET user_id = %s
                 WHERE id = %s AND user_id IS NULL
-                RETURNING id, user_id, name, public_key, coins;
+                RETURNING id, user_id, name, public_key, coins, battery, last_timestamp;
                 """,
                 (user.id, device_id)
             )
@@ -164,7 +166,9 @@ def register_device(db: psycopg.Connection, device_id: str, user: User):
             owner=str(row["user_id"]) if row["user_id"] else None,
             public_key=bytes(row["public_key"]),
             name=row["name"],
-            coins=row["coins"]
+            coins=row["coins"],
+            battery=row["battery"],
+            last_timestamp=row["last_timestamp"]
         )
     else: return None
 
@@ -175,7 +179,7 @@ def get_device(db: psycopg.Connection, device_id: str) -> Device | None:
     """
 
     with db.cursor(row_factory=dict_row) as cur:
-        cur.execute("SELECT id, user_id, name, public_key, coins FROM devices WHERE id = %s;", (device_id,))
+        cur.execute("SELECT id, user_id, name, public_key, coins, battery, last_timestamp FROM devices WHERE id = %s;", (device_id,))
         device = cur.fetchone()
 
         db.commit()
@@ -186,7 +190,9 @@ def get_device(db: psycopg.Connection, device_id: str) -> Device | None:
             owner=str(device["user_id"]) if device["user_id"] else None,
             public_key=bytes(device["public_key"]),
             name=device["name"],
-            coins=device["coins"]
+            coins=device["coins"],
+            battery=device["battery"],
+            last_timestamp=device["last_timestamp"]
         )
     else: return None
 
@@ -197,7 +203,7 @@ def get_devices(db: psycopg.Connection, user: User) -> list[Device]:
     """
 
     with db.cursor(row_factory=dict_row) as cur:
-        cur.execute("SELECT id, user_id, name, public_key, coins FROM devices WHERE user_id = %s;", (user.id,))
+        cur.execute("SELECT id, user_id, name, public_key, coins, battery, last_timestamp FROM devices WHERE user_id = %s;", (user.id,))
         rows = cur.fetchall()
 
     return [
@@ -206,7 +212,9 @@ def get_devices(db: psycopg.Connection, user: User) -> list[Device]:
             owner=str(row["user_id"]) if row["user_id"] else None,
             name=row["name"],
             public_key=bytes(row["public_key"]),
-            coins=row["coins"]
+            coins=row["coins"],
+            battery=row["battery"],
+            last_timestamp=row["last_timestamp"]
         ) for row in rows
     ]
 
@@ -227,7 +235,7 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (request_id) DO NOTHING;
                 """,
-                (comm.event_id, origin_device.id, opponent_device_id, gateway_id, comm.time_stamp, comm.send_seal_id, comm.receive_seal_id)
+                (comm.event_id, origin_device.id, opponent_device_id, gateway_id, comm.timestamp, comm.send_seal_id, comm.receive_seal_id)
             )
             inserted = cur.fetchone()
 
@@ -408,6 +416,47 @@ def get_device_seals(db: psycopg.Connection, device: Device) -> list[DeviceSeal]
         )
         rows = cur.fetchall()
 
+    return [
+        DeviceSeal(
+            id=str(row["id"]),
+            device_id=str(row["device_id"]),
+            seal_id=str(row["seal_id"]),
+            status_id=row["status_id"],
+            book_page=row["book_page"],
+            book_x=row["book_x"],
+            book_y=row["book_y"],
+            book_rotation=row["book_rotation"],
+            book_scale=row["book_scale"],
+        )
+        for row in rows
+    ]
+
+
+def get_device_trading_seals(db: psycopg.Connection, device: Device) -> list[DeviceSeal]:
+    """
+    デバイスが交換に出しているシールを取得する。
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT 
+                id,
+                device_id,
+                seal_id,
+                status_id,
+                book_page,
+                book_x,
+                book_y,
+                book_rotation,
+                book_scale
+            FROM device_seals
+            WHERE device_id = %s AND status_id = 2;
+            """,
+            (device.id,)
+        )
+        rows = cur.fetchall()
+    
     return [
         DeviceSeal(
             id=str(row["id"]),

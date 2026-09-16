@@ -68,6 +68,8 @@ class Device(BaseModel):
     name: str
     public_key: bytes
     coins: int
+    battery: float
+    last_timestamp: datetime
 
 """
 署名バイト列
@@ -80,13 +82,13 @@ class NearbyCommunication(BaseModel):
     partner_is_gateway: bool
     send_seal_id: Optional[str] = None
     receive_seal_id: Optional[str] = None
-    time_stamp: datetime
+    timestamp: datetime
     signature: bytes # 送信元デバイスによる署名
 
 class DeviceUpdateRequest(BaseModel):
     device_id: str
     request_id: str
-    time_stamp: datetime
+    timestamp: datetime
     nearby_communications: list[NearbyCommunication]
 
 class SosReceiver(BaseModel):

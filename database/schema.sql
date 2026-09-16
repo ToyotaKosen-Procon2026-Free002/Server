@@ -31,7 +31,7 @@ CREATE TABLE seal_packs (
     once_price SMALLINT NOT NULL,
     image_path TEXT NOT NULL,
     is_opened BOOLEAN NOT NULL,
-)
+);
 
 CREATE TABLE seal_packs_root_tables (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -47,7 +47,7 @@ CREATE TABLE seal_packs_root_tables (
     CONSTRAINT root_table_seal_pack_id
         FOREIGN KEY (seal_id)
         REFERENCES seals(id)
-)
+);
 
 
 

@@ -30,14 +30,14 @@ CREATE TABLE seal_packs (
     description TEXT NOT NULL,
     once_price SMALLINT NOT NULL,
     image_path TEXT NOT NULL,
-    is_opened BOOLEAN NOT NULL,
+    is_opened BOOLEAN NOT NULL
 );
 
 CREATE TABLE seal_packs_root_tables (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     seal_pack_id UUID NOT NULL,
     seal_id UUID NOT NULL,
-    weight DOUBLE NOT NULL,
+    weight DOUBLE PRECISION NOT NULL,
 
     CONSTRAINT root_table_seal_pack_id
         FOREIGN KEY (seal_pack_id)
@@ -57,8 +57,8 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     firebase_uid TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL,
-    display_name TEXT NOT NULL
-    roll SMALLINT NOT NULL DEFAULT 0,
+    display_name TEXT NOT NULL,
+    roll SMALLINT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE user_notify_token (

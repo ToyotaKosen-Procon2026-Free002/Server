@@ -113,6 +113,11 @@ class GetNearbyCommunicationsRequest(BaseModel):
     start_at: datetime
     end_at: datetime
 
+class GetSosRequest(BaseModel):
+    device_id: str
+    start_at: datetime
+    end_at: datetime
+
 class DeviceUpdateRequest(BaseModel):
     device_id: str
     request_id: str

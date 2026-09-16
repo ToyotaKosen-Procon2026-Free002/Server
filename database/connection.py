@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 import psycopg
 from psycopg.rows import dict_row
 from config import settings
-from models import Device, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInitRequest, GetNearbyCommunicationsRequest, NearbyCommunication, Seal, SealPackResponse, SealPackRootTable, SosRequest, User, UpdateUser
+from models import Device, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser
 from typing import Optional
 
 from notify import send_sos_notification
@@ -733,6 +733,59 @@ def get_nearby_communications_log(db: psycopg.Connection, request: GetNearbyComm
             receive_seal_id=str(row["receive_seal_id"]) if row["receive_seal_id"] else None,
             timestamp=row["detected_at"],
             signature=b""  # 署名は検証用にのみ使用しDBに保存していないため空バイト列を返却
+        )
+        for row in rows
+    ]
+
+
+def get_sos_log(db: psycopg.Connection, request: GetSosRequest) -> list[SosInfo]:
+    """
+    指定されたデバイスの指定された期間のSOSログを返す。
+    """
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT 
+                se.request_id,
+                se.device_id,
+                se.sos_at,
+                COALESCE(MIN(sr.received_at), se.sos_at) AS receive_timestamp,
+                se.notified,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'event_id', se.request_id::text,
+                            'gateway_id', sr.gateway_id::text,
+                            'received_at', sr.received_at
+                        )
+                    ) FILTER (WHERE sr.id IS NOT NULL),
+                    '[]'::json
+                ) AS receivers
+            FROM sos_events se
+            LEFT JOIN sos_receivers sr ON se.id = sr.sos_id
+            WHERE se.device_id = %s AND se.sos_at BETWEEN %s AND %s
+            GROUP BY se.id, se.request_id, se.device_id, se.sos_at, se.notified
+            ORDER BY se.sos_at DESC;
+            """,
+            (request.device_id, request.start_at, request.end_at)
+        )
+        rows = cur.fetchall()
+
+    return [
+        SosInfo(
+            event_id=str(row["request_id"]),
+            child_device_id=str(row["device_id"]),
+            trigger_timestamp=row["sos_at"],
+            receive_timestamp=row["receive_timestamp"],
+            notified=row["notified"],
+            receivers=[
+                SosReceiver(
+                    event_id=item["event_id"],
+                    gateway_id=item["gateway_id"],
+                    received_at=item["received_at"]
+                )
+                for item in row["receivers"]
+            ]
         )
         for row in rows
     ]

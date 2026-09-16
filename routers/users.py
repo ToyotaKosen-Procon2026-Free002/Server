@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
 from auth import get_current_user
-from models import Device, DeviceSeal, Gateway, GetNearbyCommunicationsRequest, NearbyCommunication, Seal, SealPackResponse, SuccessResponse, User, UpdateUser
+from models import Device, DeviceSeal, Gateway, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SosInfo, SuccessResponse, User, UpdateUser
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
@@ -197,5 +197,22 @@ async def get_nearby_communications_log(request: GetNearbyCommunicationsRequest,
     device = connection.get_device(db, request.device_id)
     if device and current_user.id == device.owner:
         return connection.get_nearby_communications_log(db, request)
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。")
+
+
+@router.get(
+    "/sos_log",
+    summary="指定したデバイスの、指定した期間のSOSログを取得する",
+    response_model=list[SosInfo]
+)
+async def get_sos_log(request: GetSosRequest, db: psycopg.Connection = Depends(get_connection), current_user: User = Depends(get_current_user)) -> list[SosInfo]:
+    """
+    指定したデバイスの、指定した期間のSOSログを取得する
+    """
+
+    device = connection.get_device(db, request.device_id)
+    if device and current_user.id == device.owner:
+        return connection.get_sos_log(db, request)
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。")

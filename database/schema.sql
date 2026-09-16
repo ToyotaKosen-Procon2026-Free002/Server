@@ -146,7 +146,7 @@ CREATE TABLE gateways (
     public_key BYTEA NOT NULL,
 
     name TEXT NOT NULL,
-    location GEOGRAPHY(Point, 4326) NOT NULL,
+    location GEOGRAPHY(Point, 4326) NULL,
     distribute_seal_id UUID NULL,
     user_id UUID NULL,
 

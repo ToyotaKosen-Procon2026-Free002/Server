@@ -85,6 +85,15 @@ class Device(BaseModel):
     battery: float
     last_timestamp: datetime
 
+class Gateway(BaseModel):
+    id: str
+    public_key: bytes
+    name: str
+    distribute_seal_id: Optional[str] = None
+    user_id: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
 """
 署名バイト列
 {event_id}|{my_id}|{partner_id}|{partner_is_gateway}|{send_seal_id}|{receive_seal_id}|{timestamp_unix}

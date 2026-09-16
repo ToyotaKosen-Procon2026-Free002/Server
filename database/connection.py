@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 import psycopg
 from psycopg.rows import dict_row
 from config import settings
-from models import Device, DeviceSeal, DeviceUpdateRequest, Seal, SealPackResponse, SealPackRootTable, SosRequest, User, UpdateUser
+from models import Device, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInitRequest, Seal, SealPackResponse, SealPackRootTable, SosRequest, User, UpdateUser
 from typing import Optional
 
 from notify import send_sos_notification
@@ -29,11 +29,11 @@ def get_or_create_user(db: psycopg.Connection, firebase_uid: str, email: str, na
     with db.cursor(row_factory=dict_row) as cur:
         cur.execute(
             """
-                INSERT INTO users (firebase_uid, email, display_name)
-                VALUES (%s, %s, %s)
-                ON CONFLICT (firebase_uid)
-                DO UPDATE SET firebase_uid = EXCLUDED.firebase_uid
-                RETURNING id, firebase_uid, email, display_name, roll;
+            INSERT INTO users (firebase_uid, email, display_name)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (firebase_uid)
+            DO UPDATE SET firebase_uid = EXCLUDED.firebase_uid
+            RETURNING id, firebase_uid, email, display_name, roll;
             """,
             (firebase_uid, email or "", name or "")
         )
@@ -138,7 +138,45 @@ def init_new_device(db: psycopg.Connection, device_id: str, public_key: bytes, n
     else: return None
 
 
-def register_device(db: psycopg.Connection, device_id: str, user: User):
+def init_new_gateway(db: psycopg.Connection, request: GatewayInitRequest) -> Gateway | None:
+    """
+    親機から送られてきた情報で初期登録する（既存の場合は最新の公開鍵・名前で更新して取得）。
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            INSERT INTO gateways (id, public_key, name)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (id) DO NOTHING
+            RETURNING 
+                id, 
+                public_key, 
+                name, 
+                distribute_seal_id, 
+                user_id,
+                ST_Y(location::geometry) AS latitude,
+                ST_X(location::geometry) AS longitude;
+            """,
+            (request.id, request.public_key, request.name)
+        )
+        row = cur.fetchone()
+        db.commit()
+
+    if row:
+        return Gateway(
+            id=str(row["id"]),
+            public_key=bytes(row["public_key"]),
+            name=row["name"],
+            distribute_seal_id=str(row["distribute_seal_id"]) if row["distribute_seal_id"] else None,
+            user_id=str(row["user_id"]) if row["user_id"] else None,
+            latitude=row["latitude"],
+            longitude=row["longitude"],
+        )
+    else: return None
+
+
+def register_device(db: psycopg.Connection, device_id: str, user: User) -> Device | None:
     """
     初期登録のみされたデバイスをユーザーに割り当てる。
     """
@@ -170,6 +208,40 @@ def register_device(db: psycopg.Connection, device_id: str, user: User):
             battery=row["battery"],
             last_timestamp=row["last_timestamp"]
         )
+    else: return None
+
+
+def register_gateway(db: psycopg.Connection, gateway_id: str, user: User) -> Gateway | None:
+    """
+    初期登録のみされた親機をユーザーに割り当てる。
+    """
+
+    gateway = get_gateway(db, gateway_id)
+    if gateway:
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                UPDATE gateways
+                SET user_id = %s
+                WHERE id = %s AND user_id IS NULL
+                RETURNING id, user_id, name, public_key, distribute_seal_id, ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude;
+                """,
+                (user.id, gateway_id)
+            )
+            row = cur.fetchone()
+        db.commit()
+
+        if row:
+            return Gateway(
+                id=str(row["id"]),
+                public_key=bytes(row["public_key"]),
+                user_id=str(row["user_id"]),
+                name=row["name"],
+                distribute_seal_id=str(row["distribute_seal_id"]),
+                latitude=row["latitude"],
+                longitude=row["longitude"]
+            )
+        else: return None
     else: return None
 
 
@@ -538,3 +610,32 @@ def get_seals(db: psycopg.Connection) -> list[Seal]:
         )
         for row in rows
     ]
+
+
+def get_gateway(db: psycopg.Connection, gateway_id: str) -> Gateway | None:
+    """
+    idから親機を取得する。
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT id, user_id, name, public_key, distribute_seal_id, ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude
+            FROM gateways
+            WHERE id = %s;
+            """,
+            (gateway_id, )
+        )
+        row = cur.fetchone()
+
+    if row:
+        return Gateway(
+            id=str(row["id"]),
+            public_key=bytes(row["public_key"]),
+            user_id=str(row["user_id"]),
+            name=row["name"],
+            distribute_seal_id=str(row["distribute_seal_id"]),
+            latitude=row["latitude"],
+            longitude=row["longitude"]
+        )
+    else: return None

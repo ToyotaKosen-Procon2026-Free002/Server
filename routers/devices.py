@@ -3,7 +3,7 @@ import psycopg
 from auth import get_current_device, get_current_user, verify_comm_event_signature, verify_sos_signature
 from database.connection import get_connection, init_new_device, received_sos, update_device_status
 from database import connection
-from models import DeviceInitRequest, DeviceSeal, User, Device, SuccessResponse, SosRequest, DeviceUpdateRequest
+from models import DeviceInitRequest, DeviceSeal, GatewayInitRequest, User, Device, SuccessResponse, SosRequest, DeviceUpdateRequest
 
 
 router = APIRouter(
@@ -82,10 +82,16 @@ async def get_trading_seals(current_device: Device = Depends(get_current_device)
     return connection.get_device_trading_seals(db, current_device)
 
 
-"""
+
 @router.post(
     "/gateway",
     summary="新しい親機をサーバーに初回登録する",
     response_model=SuccessResponse
 )
-async def register_new_gateway()"""
+async def register_new_gateway(request: GatewayInitRequest, db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
+    """
+    新しい親機をサーバーに初期登録する
+    """
+
+    gateway = connection.init_new_gateway(db, request)
+    return SuccessResponse(success=True if gateway else False)

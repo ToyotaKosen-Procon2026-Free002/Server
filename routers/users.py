@@ -140,3 +140,17 @@ async def get_device(current_user: User = Depends(get_current_user), db: psycopg
     """
 
     return connection.get_devices(db, current_user)
+
+
+@router.post(
+    "/gateway",
+    summary="親機の登録を行う"
+)
+async def register_gateway(gateway_id: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
+    """
+    現在ログインしているユーザーに親機を登録する。
+    IDがすでにサーバーに登録されていて、どのアカウントの所有物でもない必要がある。
+    """
+
+    gateway = connection.register_gateway(db, gateway_id, current_user)
+    return SuccessResponse(success=True if gateway else False)

@@ -33,7 +33,7 @@ def get_or_create_user(db: psycopg.Connection, firebase_uid: str, email: str, na
                 VALUES (%s, %s, %s)
                 ON CONFLICT (firebase_uid)
                 DO UPDATE SET firebase_uid = EXCLUDED.firebase_uid
-                RETURNING id, firebase_uid, email, display_name;
+                RETURNING id, firebase_uid, email, display_name, roll;
             """,
             (firebase_uid, email or "", name or "")
         )
@@ -58,7 +58,8 @@ def get_or_create_user(db: psycopg.Connection, firebase_uid: str, email: str, na
         display_name=user_row["display_name"],
         email=user_row["email"],
         firebase_uid=user_row["firebase_uid"],
-        notify_tokens=notify_tokens
+        notify_tokens=notify_tokens,
+        roll=user_row["roll"]
     )
 
 def update_user(db: psycopg.Connection, update_user: UpdateUser, current_user: User):
@@ -73,10 +74,11 @@ def update_user(db: psycopg.Connection, update_user: UpdateUser, current_user: U
             SET
                 display_name = COALESCE(%s, display_name),
                 email = COALESCE(%s, email)
+                roll = COALESCE(%s, roll)
             WHERE firebase_uid = %s
-            RETURNING id, firebase_uid, COALESCE(email, '') AS email, COALESCE(display_name, '') AS display_name;
+            RETURNING id, firebase_uid, COALESCE(email, '') AS email, COALESCE(display_name, '') AS display_name, COALESCE(roll, '') AS roll;
             """,
-            (update_user.display_name, update_user.email, current_user.firebase_uid)
+            (update_user.display_name, update_user.email, update_user.roll, current_user.firebase_uid)
         )
         user_row = cur.fetchone()
         assert user_row is not None
@@ -95,7 +97,8 @@ def update_user(db: psycopg.Connection, update_user: UpdateUser, current_user: U
         display_name=user_row["display_name"],
         email=user_row["email"],
         firebase_uid=user_row["firebase_uid"],
-        notify_tokens=notify_tokens
+        notify_tokens=notify_tokens,
+        roll=user_row["roll"]
     )
 
 def init_new_device(db: psycopg.Connection, device_id: str, public_key: bytes, name: Optional[str] = None) -> Device | None:

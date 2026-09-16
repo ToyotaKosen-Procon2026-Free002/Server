@@ -16,6 +16,7 @@ class User(BaseModel):
     email: str
     firebase_uid: str
     notify_tokens: list[str]
+    roll: int
 
 class DeviceInfoUpdateRequest(BaseModel):
     device_id: str
@@ -24,6 +25,7 @@ class DeviceInfoUpdateRequest(BaseModel):
 class UpdateUser(BaseModel):
     display_name: Optional[str] = None
     email: Optional[str] = None
+    roll: Optional[int] = None
 
 
 class DeviceSeal(BaseModel):

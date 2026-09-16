@@ -58,6 +58,7 @@ CREATE TABLE users (
     firebase_uid TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL,
     display_name TEXT NOT NULL
+    roll SMALLINT NOT NULL DEFAULT 0,
 );
 
 CREATE TABLE user_notify_token (

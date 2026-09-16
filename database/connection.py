@@ -93,7 +93,7 @@ def update_user(db: psycopg.Connection, update_user: UpdateUser, current_user: U
         db.commit()
 
     return User(
-        id=user_row["id"],
+        id=str(user_row["id"]),
         display_name=user_row["display_name"],
         email=user_row["email"],
         firebase_uid=user_row["firebase_uid"],

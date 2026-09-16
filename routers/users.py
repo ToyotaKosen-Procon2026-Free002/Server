@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
 from auth import get_current_user
-from models import Device, DeviceSeal, Gateway, Seal, SealPackResponse, SuccessResponse, User, UpdateUser
+from models import Device, DeviceSeal, Gateway, GetNearbyCommunicationsRequest, NearbyCommunication, Seal, SealPackResponse, SuccessResponse, User, UpdateUser
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
@@ -182,3 +182,20 @@ async def get_all_gateways(current_user: User = Depends(get_current_user), db: p
     """
 
     return connection.get_all_gateways(db)
+
+
+@router.get(
+    "/nearby_communications_log",
+    summary="指定したデバイスの、指定した期間のすれ違いログを取得する",
+    response_model=list[NearbyCommunication]
+)
+async def get_nearby_communications_log(request: GetNearbyCommunicationsRequest, db: psycopg.Connection = Depends(get_connection), current_user: User = Depends(get_current_user)) -> list[NearbyCommunication]:
+    """
+    指定したデバイスの、指定した期間のすれ違いログを取得する
+    """
+
+    device = connection.get_device(db, request.device_id)
+    if device and current_user.id == device.owner:
+        return connection.get_nearby_communications_log(db, request)
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。")

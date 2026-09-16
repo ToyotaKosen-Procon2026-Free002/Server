@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 import psycopg
 from psycopg.rows import dict_row
 from config import settings
-from models import Device, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInitRequest, Seal, SealPackResponse, SealPackRootTable, SosRequest, User, UpdateUser
+from models import Device, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInitRequest, GetNearbyCommunicationsRequest, NearbyCommunication, Seal, SealPackResponse, SealPackRootTable, SosRequest, User, UpdateUser
 from typing import Optional
 
 from notify import send_sos_notification
@@ -694,6 +694,45 @@ def get_all_gateways(db: psycopg.Connection) -> list[Gateway]:
             distribute_seal_id=str(row["distribute_seal_id"]),
             latitude=row["latitude"],
             longitude=row["longitude"]
+        )
+        for row in rows
+    ]
+
+
+def get_nearby_communications_log(db: psycopg.Connection, request: GetNearbyCommunicationsRequest) -> list[NearbyCommunication]:
+    """
+    指定されたデバイスの指定された期間のすれ違いログを返す。
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT 
+                request_id,
+                device_id,
+                opponent_device_id,
+                gateway_id,
+                send_seal_id,
+                receive_seal_id,
+                detected_at
+            FROM encounters
+            WHERE device_id = %s AND detected_at BETWEEN %s AND %s
+            ORDER BY detected_at DESC;
+            """,
+            (request.device_id, request.start_at, request.end_at)
+        )
+        rows = cur.fetchall()
+
+    return [
+        NearbyCommunication(
+            event_id=str(row["request_id"]),
+            my_id=str(row["device_id"]),
+            partner_id=str(row["gateway_id"] or row["opponent_device_id"]),
+            partner_is_gateway=row["gateway_id"] is not None,
+            send_seal_id=str(row["send_seal_id"]) if row["send_seal_id"] else None,
+            receive_seal_id=str(row["receive_seal_id"]) if row["receive_seal_id"] else None,
+            timestamp=row["detected_at"],
+            signature=b""  # 署名は検証用にのみ使用しDBに保存していないため空バイト列を返却
         )
         for row in rows
     ]

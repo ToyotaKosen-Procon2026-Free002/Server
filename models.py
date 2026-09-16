@@ -108,6 +108,11 @@ class NearbyCommunication(BaseModel):
     timestamp: datetime
     signature: bytes # 送信元デバイスによる署名
 
+class GetNearbyCommunicationsRequest(BaseModel):
+    device_id: str
+    start_at: datetime
+    end_at: datetime
+
 class DeviceUpdateRequest(BaseModel):
     device_id: str
     request_id: str

@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 import psycopg
 from psycopg.rows import dict_row
 from config import settings
-from models import Device, DeviceUpdateRequest, SealPackResponse, SealPackRootTable, SosRequest, User, UpdateUser
+from models import Device, DeviceSeal, DeviceUpdateRequest, SealPackResponse, SealPackRootTable, SosRequest, User, UpdateUser
 from typing import Optional
 
 from notify import send_sos_notification
@@ -375,6 +375,47 @@ def get_seal_packs(db: psycopg.Connection) -> list[SealPackResponse]:
                 )
                 for item in row["root_table"]
             ]
+        )
+        for row in rows
+    ]
+
+
+def get_device_seals(db: psycopg.Connection, device: Device) -> list[DeviceSeal]:
+    """
+    デバイスが所持しているシール一覧を返す。
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT 
+                id,
+                device_id,
+                seal_id,
+                status_id,
+                book_page,
+                book_x,
+                book_y,
+                book_rotation,
+                book_scale
+            FROM device_seals
+            WHERE device_id = %s;
+            """,
+            (device.id,)
+        )
+        rows = cur.fetchall()
+
+    return [
+        DeviceSeal(
+            id=str(row["id"]),
+            device_id=str(row["device_id"]),
+            seal_id=str(row["seal_id"]),
+            status_id=row["status_id"],
+            book_page=row["book_page"],
+            book_x=row["book_x"],
+            book_y=row["book_y"],
+            book_rotation=row["book_rotation"],
+            book_scale=row["book_scale"],
         )
         for row in rows
     ]

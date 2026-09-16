@@ -117,7 +117,8 @@ async def get_seals(current_user: User =Depends(get_current_user), db: psycopg.C
 
 @router.post(
     "/device",
-    summary="デバイスを登録"
+    summary="デバイスを登録",
+    response_model=SuccessResponse
 )
 async def register_device(device_id: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
     """
@@ -144,7 +145,8 @@ async def get_device(current_user: User = Depends(get_current_user), db: psycopg
 
 @router.post(
     "/gateway",
-    summary="親機の登録を行う"
+    summary="親機の登録を行う",
+    response_model=SuccessResponse
 )
 async def register_gateway(gateway_id: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
     """
@@ -158,7 +160,8 @@ async def register_gateway(gateway_id: str, current_user: User = Depends(get_cur
 
 @router.get(
     "/gateways",
-    summary="登録済みの親機一覧を取得"
+    summary="登録済みの親機一覧を取得",
+    response_model=list[Gateway]
 )
 async def get_gateways(current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Gateway]:
     """
@@ -166,3 +169,16 @@ async def get_gateways(current_user: User = Depends(get_current_user), db: psyco
     """
 
     return connection.get_gateways(db, current_user)
+
+
+@router.get(
+    "/all_gateways",
+    summary="すべての親機の一覧を取得",
+    response_model=list[Gateway]
+)
+async def get_all_gateways(current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Gateway]:
+    """
+    データベースに登録されているすべての親機一覧を取得する。
+    """
+
+    return connection.get_all_gateways(db)

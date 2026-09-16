@@ -26,6 +26,20 @@ class UpdateUser(BaseModel):
     email: Optional[str] = None
 
 
+class SealPackRootTable(BaseModel):
+    seal_id: str
+    weight: float
+
+
+class SealPackResponse(BaseModel):
+    id: str
+    name: str
+    description: str
+    once_price: int
+    image_path: str
+    root_table: list[SealPackRootTable]
+
+
 # 主に親機や子機との通信に使用される
 
 class DeviceInitRequest(BaseModel):

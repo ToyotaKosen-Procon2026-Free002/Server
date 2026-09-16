@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends
 from typing import Annotated
 from auth import get_current_user
-from models import User, UpdateUser
+from models import SealPackResponse, User, UpdateUser
 from database.connection import get_connection, update_user
+from database import connection
 import psycopg
 
 router = APIRouter(
@@ -37,3 +38,18 @@ async def update_me(_update_user: UpdateUser, current_user: User = Depends(get_c
     """
 
     return update_user(db, _update_user, current_user)
+
+
+
+@router.get(
+    "/seal_packs",
+    summary="現在開催中のシールパック一覧を返す。",
+    response_model=list[SealPackResponse]
+)
+async def get_seal_packs(current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[SealPackResponse]:
+    """
+    現在開催中のシールパック一覧を返す。
+    """
+
+    return connection.get_seal_packs(db)
+

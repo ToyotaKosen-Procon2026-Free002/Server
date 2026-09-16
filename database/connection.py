@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 import psycopg
 from psycopg.rows import dict_row
 from config import settings
-from models import Device, DeviceUpdateRequest, SosRequest, User, UpdateUser
+from models import Device, DeviceUpdateRequest, SealPackResponse, SealPackRootTable, SosRequest, User, UpdateUser
 from typing import Optional
 
 from notify import send_sos_notification
@@ -328,3 +328,53 @@ def received_sos(db: psycopg.Connection, request: SosRequest, child_device: Devi
                         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="SOSの送信に失敗しました。: [{sos_id}] {e}")
 
         db.commit()
+
+
+def get_seal_packs(db: psycopg.Connection) -> list[SealPackResponse]:
+    """
+    現在開催中のシールパック一覧を返す。
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT 
+                sp.id,
+                sp.name,
+                sp.description,
+                sp.once_price,
+                sp.image_path,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'seal_id', sprt.seal_id::text,
+                            'weight', sprt.weight
+                        )
+                    ) FILTER (WHERE sprt.id IS NOT NULL),
+                    '[]'::json
+                ) AS root_table
+            FROM seal_packs sp
+            LEFT JOIN seal_packs_root_tables sprt ON sp.id = sprt.seal_pack_id
+            WHERE sp.is_opened = TRUE
+            GROUP BY sp.id;
+            """
+        )
+        rows = cur.fetchall()
+
+    return [
+        SealPackResponse(
+            id=str(row["id"]),
+            name=row["name"],
+            description=row["description"],
+            once_price=row["once_price"],
+            image_path=row["image_path"],
+            root_table=[
+                SealPackRootTable(
+                    seal_id=item["seal_id"],
+                    weight=item["weight"]
+                )
+                for item in row["root_table"]
+            ]
+        )
+        for row in rows
+    ]

@@ -24,6 +24,32 @@ CREATE TABLE seals (
 );
 
 
+CREATE TABLE seal_packs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    once_price SMALLINT NOT NULL,
+    image_path TEXT NOT NULL,
+    is_opened BOOLEAN NOT NULL,
+)
+
+CREATE TABLE seal_packs_root_tables (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    seal_pack_id UUID NOT NULL,
+    seal_id UUID NOT NULL,
+    weight DOUBLE NOT NULL,
+
+    CONSTRAINT root_table_seal_pack_id
+        FOREIGN KEY (seal_pack_id)
+        REFERENCES seal_packs(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT root_table_seal_pack_id
+        FOREIGN KEY (seal_id)
+        REFERENCES seals(id)
+)
+
+
 
 -- ユーザー
 
@@ -80,6 +106,8 @@ CREATE TABLE device_seals (
     book_page SMALLINT NULL,
     book_x DOUBLE PRECISION NULL,
     book_y DOUBLE PRECISION NULL,
+    book_rotation DOUBLE PRECISION NULL,
+    book_scale DOUBLE PRECISION NULL,
 
     CONSTRAINT device_seals_status
         FOREIGN KEY (status_id)

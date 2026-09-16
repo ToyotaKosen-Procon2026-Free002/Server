@@ -55,6 +55,14 @@ class SealPackResponse(BaseModel):
     root_table: list[SealPackRootTable]
 
 
+class Seal(BaseModel):
+    id: str
+    name: str
+    description: str
+    rarity: int
+    image_path: str
+
+
 # 主に親機や子機との通信に使用される
 
 class DeviceInitRequest(BaseModel):

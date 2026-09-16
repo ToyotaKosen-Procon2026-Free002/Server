@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
 from auth import get_current_user
-from models import DeviceSeal, SealPackResponse, SuccessResponse, User, UpdateUser
+from models import DeviceSeal, Seal, SealPackResponse, SuccessResponse, User, UpdateUser
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
@@ -98,3 +98,17 @@ async def delete_notify_token(token: str, current_user: User = Depends(get_curre
 
     connection.delete_notify_token(db, token, current_user)
     return SuccessResponse(success=True)
+
+
+
+@router.get(
+    "/seals",
+    summary="存在するシールの一覧を返す",
+    response_model=list[Seal]
+)
+async def get_seals(current_user: User =Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Seal]:
+    """
+    存在するシールの一覧を返す
+    """
+
+    return connection.get_seals(db)

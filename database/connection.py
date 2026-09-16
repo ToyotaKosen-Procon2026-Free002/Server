@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 import psycopg
 from psycopg.rows import dict_row
 from config import settings
-from models import Device, DeviceSeal, DeviceUpdateRequest, SealPackResponse, SealPackRootTable, SosRequest, User, UpdateUser
+from models import Device, DeviceSeal, DeviceUpdateRequest, Seal, SealPackResponse, SealPackRootTable, SosRequest, User, UpdateUser
 from typing import Optional
 
 from notify import send_sos_notification
@@ -507,3 +507,34 @@ def delete_notify_token(db: psycopg.Connection, token: str, user: User):
         )
 
     db.commit()
+
+
+def get_seals(db: psycopg.Connection) -> list[Seal]:
+    """
+    存在するシールの一覧を返す。
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT 
+                id,
+                name,
+                description,
+                rarity,
+                image_path
+            FROM seals;
+            """
+        )
+        rows = cur.fetchall()
+
+    return [
+        Seal(
+            id=str(row["id"]),
+            name=row["name"],
+            description=row["description"],
+            rarity=row["rarity"],
+            image_path=row["image_path"],
+        )
+        for row in rows
+    ]

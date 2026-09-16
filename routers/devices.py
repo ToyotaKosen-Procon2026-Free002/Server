@@ -13,33 +13,6 @@ router = APIRouter(
 
 
 @router.post(
-    "",
-    summary="デバイスを登録"
-)
-async def register_device(device_id: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
-    """
-    現在ログインしているユーザーにデバイスを登録する。
-    デバイスIDがすでにサーバーに登録されていて、どのアカウントの所有物ではない必要がある。
-    """
-
-    device = connection.register_device(db, device_id, current_user)
-    return SuccessResponse(success=True if device else False)
-
-
-@router.get(
-    "",
-    response_model=list[Device],
-    summary="登録済みデバイス一覧を取得"
-)
-async def get_device(current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Device]:
-    """
-    現在ログインしているユーザーに登録されているデバイスの一覧を取得します。
-    """
-
-    return connection.get_devices(db, current_user)
-
-
-@router.post(
     "/activate",
     response_model=SuccessResponse,
     summary="新しいデバイスをサーバーに初回登録する"

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
 from auth import get_current_user
-from models import DeviceSeal, Seal, SealPackResponse, SuccessResponse, User, UpdateUser
+from models import Device, DeviceSeal, Seal, SealPackResponse, SuccessResponse, User, UpdateUser
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
@@ -112,3 +112,31 @@ async def get_seals(current_user: User =Depends(get_current_user), db: psycopg.C
     """
 
     return connection.get_seals(db)
+
+
+
+@router.post(
+    "/device",
+    summary="デバイスを登録"
+)
+async def register_device(device_id: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
+    """
+    現在ログインしているユーザーにデバイスを登録する。
+    デバイスIDがすでにサーバーに登録されていて、どのアカウントの所有物ではない必要がある。
+    """
+
+    device = connection.register_device(db, device_id, current_user)
+    return SuccessResponse(success=True if device else False)
+
+
+@router.get(
+    "/devices",
+    response_model=list[Device],
+    summary="登録済みデバイス一覧を取得"
+)
+async def get_device(current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Device]:
+    """
+    現在ログインしているユーザーに登録されているデバイスの一覧を取得します。
+    """
+
+    return connection.get_devices(db, current_user)

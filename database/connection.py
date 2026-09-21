@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 import psycopg
 from psycopg.rows import dict_row
 from config import settings
-from models import Device, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser
+from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser
 from typing import Optional
 
 from notify import send_sos_notification
@@ -789,3 +789,20 @@ def get_sos_log(db: psycopg.Connection, request: GetSosRequest) -> list[SosInfo]
         )
         for row in rows
     ]
+
+
+def patch_device_info(db: psycopg.Connection, request: DeviceInfoPatchRequest) -> None:
+    """
+    指定したデバイスの情報を更新する。
+    """
+
+    with db.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE devices
+            SET name = %s
+            WHERE id = %s;
+            """,
+            (request.name, request.device_id)
+        )
+        db.commit()

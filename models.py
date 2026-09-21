@@ -63,6 +63,11 @@ class Seal(BaseModel):
     image_path: str
 
 
+class DeviceInfoPatchRequest(BaseModel):
+    device_id: str
+    name: str
+
+
 # 主に親機や子機との通信に使用される
 
 class DeviceInitRequest(BaseModel):

@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 import psycopg
 from psycopg.rows import dict_row
 from config import settings
-from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser
+from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInfoPatchRequest, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser
 from typing import Optional
 
 from notify import send_sos_notification
@@ -804,5 +804,30 @@ def patch_device_info(db: psycopg.Connection, request: DeviceInfoPatchRequest) -
             WHERE id = %s;
             """,
             (request.name, request.device_id)
+        )
+        db.commit()
+
+
+def patch_gateway_info(db: psycopg.Connection, request: GatewayInfoPatchRequest) -> None:
+    """
+    指定した親機の情報を更新する。
+    """
+    with db.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE gateways
+            SET 
+                name = %s,
+                distribute_seal_id = %s,
+                location = ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
+            WHERE id = %s;
+            """,
+            (
+                request.name,
+                request.distribute_seal_id,
+                request.longitude,  # PostGISのMakePointは (経度, 緯度) の順
+                request.latitude,
+                request.device_id,
+            )
         )
         db.commit()

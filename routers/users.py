@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
 from auth import get_current_user
-from models import Device, DeviceInfoPatchRequest, DeviceSeal, Gateway, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SosInfo, SuccessResponse, User, UpdateUser
+from models import Device, DeviceInfoPatchRequest, DeviceSeal, Gateway, GatewayInfoPatchRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SosInfo, SuccessResponse, User, UpdateUser
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
@@ -234,3 +234,21 @@ async def patch_device_info(request: DeviceInfoPatchRequest, db: psycopg.Connect
         return SuccessResponse(success=True)
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。")
+
+
+@router.patch(
+    "/gateway",
+    summary="指定したIDの親機の情報を更新する",
+    response_model=SuccessResponse
+)
+async def patch_gateway_info(request: GatewayInfoPatchRequest, db: psycopg.Connection = Depends(get_connection), current_user: User = Depends(get_current_user)) -> SuccessResponse:
+    """
+    指定した親機の情報を更新する
+    """
+
+    gateway = connection.get_gateway(db, request.device_id)
+    if gateway and current_user.id == gateway.user_id:
+        connection.patch_gateway_info(db, request)
+        return SuccessResponse(success=True)
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="存在しない親機を指定しているか、所持していない親機を指定しています。")

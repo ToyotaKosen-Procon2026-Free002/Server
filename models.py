@@ -68,6 +68,14 @@ class DeviceInfoPatchRequest(BaseModel):
     name: str
 
 
+class GatewayInfoPatchRequest(BaseModel):
+    device_id: str
+    name: str
+    distribute_seal_id: str
+    latitude: float
+    longitude: float
+
+
 # 主に親機や子機との通信に使用される
 
 class DeviceInitRequest(BaseModel):

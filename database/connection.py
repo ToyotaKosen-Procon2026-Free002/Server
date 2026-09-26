@@ -1,8 +1,10 @@
+from datetime import date, timedelta
+
 from fastapi import HTTPException, status
 import psycopg
 from psycopg.rows import dict_row
 from config import settings
-from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInfoPatchRequest, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser
+from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInfoPatchRequest, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser, WeeklyMissionItem
 from typing import Optional
 
 from notify import send_sos_notification
@@ -831,3 +833,147 @@ def patch_gateway_info(db: psycopg.Connection, request: GatewayInfoPatchRequest)
             )
         )
         db.commit()
+
+
+def get_current_week_start() -> date:
+    """
+    直前の月曜日の月日を取得する関数。
+    """
+
+    today = date.today()
+    # today.weekday() は月曜=0, 日曜=6
+    return today - timedelta(days=today.weekday())
+
+
+def get_or_create_weekly_missions(db: psycopg.Connection, device_id: str) -> list[WeeklyMissionItem]:
+    """
+    指定したデバイスのウィークリーミッションを、取得する。
+    なければ作成して返す。
+    """
+
+    week_start = get_current_week_start()
+
+    with db.cursor(row_factory=dict_row) as cur:
+        # 1. アクティブな全ミッションと、現在のデバイスの今週の進捗を LEFT JOIN で取得
+        cur.execute(
+            """
+            SELECT 
+                m.id AS mission_id,
+                m.title,
+                m.description,
+                m.target_type,
+                m.target_value,
+                m.reward_coins,
+                COALESCE(p.current_value, 0) AS current_value,
+                COALESCE(p.is_completed, FALSE) AS is_completed,
+                COALESCE(p.is_claimed, FALSE) AS is_claimed
+            FROM weekly_missions m
+            LEFT JOIN device_mission_progress p 
+                ON m.id = p.mission_id 
+                AND p.device_id = %s 
+                AND p.week_start_date = %s
+            WHERE m.is_active = TRUE;
+            """,
+            (device_id, week_start)
+        )
+        rows = cur.fetchall()
+
+    return [
+        WeeklyMissionItem(
+            mission_id=str(row["mission_id"]),
+            title=row["title"],
+            description=row["description"],
+            target_type=row["target_type"],
+            target_value=row["target_value"],
+            current_value=row["current_value"],
+            reward_coins=row["reward_coins"],
+            is_completed=row["is_completed"],
+            is_claimed=row["is_claimed"],
+        )
+        for row in rows
+    ]
+
+
+def increment_mission_progress(db: psycopg.Connection, device_id: str, target_type: str, amount: int = 1):
+    """
+    ミッションの進捗更新を行う。
+    """
+
+    week_start = get_current_week_start()
+
+    with db.cursor() as cur:
+        # 該当するアクティブミッションを取得して進捗を更新（UPSERT）
+        cur.execute(
+            """
+            INSERT INTO device_mission_progress (device_id, mission_id, week_start_date, current_value, is_completed)
+            SELECT 
+                %s, 
+                m.id, 
+                %s, 
+                %s, 
+                (%s >= m.target_value)
+            FROM weekly_missions m
+            WHERE m.target_type = %s AND m.is_active = TRUE
+            ON CONFLICT (device_id, mission_id, week_start_date) 
+            DO UPDATE SET 
+                current_value = device_mission_progress.current_value + EXCLUDED.current_value,
+                is_completed = (device_mission_progress.current_value + EXCLUDED.current_value) >= (
+                    SELECT target_value FROM weekly_missions WHERE id = EXCLUDED.mission_id
+                ),
+                updated_at = NOW()
+            WHERE device_mission_progress.is_completed = FALSE; -- 既に達成済みの場合は更新しない
+            """,
+            (device_id, week_start, amount, amount, target_type)
+        )
+        db.commit()
+
+
+def claim_mission_reward(db: psycopg.Connection, device_id: str, mission_id: str, week_start_date: date) -> int:
+    """
+    ミッション報酬を受け取り、デバイスのコインを増やす。
+    戻り値: 付与されたコイン数
+    """
+    with db.cursor(row_factory=dict_row) as cur:
+        # 1. 進捗状況の確認と is_claimed のアトミック更新（行ロックを兼ねる）
+        cur.execute(
+            """
+            UPDATE device_mission_progress p
+            SET 
+                is_claimed = TRUE,
+                updated_at = NOW()
+            FROM weekly_missions m
+            WHERE p.mission_id = m.id
+                AND p.device_id = %s
+                AND p.mission_id = %s
+                AND p.week_start_date = %s
+                AND p.is_completed = TRUE
+                AND p.is_claimed = FALSE
+            RETURNING m.reward_coins;
+            """,
+            (device_id, mission_id, week_start_date)
+        )
+        row = cur.fetchone()
+
+        # 条件を満たさない（未達成、受け取り済み、レコードが存在しない等）場合
+        if not row:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="報酬を受け取ることができません。未達成であるか、既に受け取り済みです。"
+            )
+
+        reward_coins = row["reward_coins"]
+
+        # 2. デバイスにコインを付与
+        cur.execute(
+            """
+            UPDATE devices
+            SET coins = coins + %s
+            WHERE id = %s;
+            """,
+            (reward_coins, device_id)
+        )
+
+        # 3. トランザクションを確定
+        db.commit()
+
+    return reward_coins

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
 from auth import get_current_user
-from models import Device, DeviceInfoPatchRequest, DeviceSeal, Gateway, GatewayInfoPatchRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SosInfo, SuccessResponse, User, UpdateUser
+from models import ClaimRewardRequest, ClaimRewardResponse, Device, DeviceInfoPatchRequest, DeviceSeal, Gateway, GatewayInfoPatchRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SosInfo, SuccessResponse, User, UpdateUser, WeeklyMissionItem
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
@@ -252,3 +252,51 @@ async def patch_gateway_info(request: GatewayInfoPatchRequest, db: psycopg.Conne
         return SuccessResponse(success=True)
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="存在しない親機を指定しているか、所持していない親機を指定しています。")
+
+
+@router.post(
+    "/missions/claim",
+    summary="ミッション報酬を受け取る",
+    response_model=ClaimRewardResponse
+)
+async def claim_reward(request: ClaimRewardRequest, db: psycopg.Connection = Depends(get_connection), current_user: User = Depends(get_current_user)):
+    """
+    ミッションの報酬を受け取る
+    """
+
+    device = connection.get_device(db, request.device_id)
+    if not device or device.owner != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。"
+        )
+
+    week_start = connection.get_current_week_start()
+    claimed_coins = connection.claim_mission_reward(
+        db, request.device_id, request.mission_id, week_start
+    )
+
+    return ClaimRewardResponse(
+        claimed_coins=claimed_coins,
+        message=f"{claimed_coins} コインを獲得しました！"
+    )
+
+
+@router.get(
+    "/missions/weekly",
+    summary="指定したデバイスの今週のウィークリーミッション一覧を取得する",
+    response_model=list[WeeklyMissionItem]
+)
+async def get_weekly_missions(device_id: str, db: psycopg.Connection = Depends(get_connection), current_user: User = Depends(get_current_user)) -> list[WeeklyMissionItem]:
+    """
+    指定されたデバイスの現在の週のウィークリーミッション一覧と進捗状況を取得します。
+    """
+    
+    device = connection.get_device(db, device_id)
+    if not device or device.owner != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。"
+        )
+
+    return connection.get_or_create_weekly_missions(db, device_id)

@@ -76,6 +76,27 @@ class GatewayInfoPatchRequest(BaseModel):
     longitude: float
 
 
+class WeeklyMissionItem(BaseModel):
+    mission_id: str
+    title: str
+    description: str
+    target_type: str
+    target_value: int
+    current_value: int
+    reward_coins: int
+    is_completed: bool
+    is_claimed: bool
+
+
+class ClaimRewardRequest(BaseModel):
+    device_id: str
+    mission_id: str
+
+class ClaimRewardResponse(BaseModel):
+    claimed_coins: int
+    message: str
+
+
 # 主に親機や子機との通信に使用される
 
 class DeviceInitRequest(BaseModel):

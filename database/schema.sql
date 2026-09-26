@@ -247,6 +247,47 @@ CREATE TABLE sos_receivers (
 );
 
 
+-- ウィークリーミッション
+
+CREATE TABLE weekly_missions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,                  -- 例: 「親機と1回すれ違おう」
+    description TEXT NOT NULL,            -- 例: 「街中の親機(Gateway)とすれ違い通信を行う」
+    target_type TEXT NOT NULL,            -- 例: 'ENCOUNTER_GATEWAY', 'GET_SEAL', 'SOS_HELP' 等
+    target_value INTEGER NOT NULL,        -- 達成に必要な回数 (例: 1, 3, 5)
+    reward_coins INTEGER NOT NULL DEFAULT 0, -- 報酬コイン数
+    is_active BOOLEAN NOT NULL DEFAULT TRUE  -- 現在採用されているミッションか
+);
+
+CREATE TABLE device_mission_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_id UUID NOT NULL,
+    mission_id UUID NOT NULL,
+    
+    -- 週の識別（該当週の「月曜日の日付」を保持するのが最も扱いやすい）
+    week_start_date DATE NOT NULL, 
+    
+    current_value INTEGER NOT NULL DEFAULT 0, -- 現在の達成数 (例: 2 / 3)
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE, -- 達成条件を満たしたか
+    is_claimed BOOLEAN NOT NULL DEFAULT FALSE,   -- 報酬を受け取ったか
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_progress_device
+        FOREIGN KEY (device_id)
+        REFERENCES devices(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_progress_mission
+        FOREIGN KEY (mission_id)
+        REFERENCES weekly_missions(id)
+        ON DELETE CASCADE,
+
+    -- 同じデバイス・同じミッション・同じ週で重複レコードを作らない
+    CONSTRAINT unique_device_mission_per_week
+        UNIQUE (device_id, mission_id, week_start_date)
+);
+
+
 -- インデックス
 
 CREATE INDEX idx_device_seals_device
@@ -260,3 +301,6 @@ ON sos_events(device_id);
 
 CREATE INDEX idx_sos_receivers_sos
 ON sos_receivers(sos_id);
+
+CREATE INDEX idx_device_mission_progress_search 
+ON device_mission_progress (device_id, week_start_date);

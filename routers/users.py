@@ -309,7 +309,7 @@ async def get_weekly_missions(device_id: str, db: psycopg.Connection = Depends(g
 @router.get(
     "/images/{image_path}",
     summary="画像を取得する",
-    response_model=FileResponse
+    response_class=FileResponse
 )
 async def get_image(image_path: str) -> FileResponse:
     image_path = f"/static/images/{image_path}"

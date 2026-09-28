@@ -1,5 +1,9 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
+
+from fastapi.responses import FileResponse
 from auth import get_current_user
 from models import ClaimRewardRequest, ClaimRewardResponse, Device, DeviceInfoPatchRequest, DeviceSeal, Gateway, GatewayInfoPatchRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SosInfo, SuccessResponse, User, UpdateUser, WeeklyMissionItem
 from database.connection import get_connection, update_user
@@ -300,3 +304,18 @@ async def get_weekly_missions(device_id: str, db: psycopg.Connection = Depends(g
         )
 
     return connection.get_or_create_weekly_missions(db, device_id)
+
+
+@router.get(
+    "/images",
+    summary="画像を取得する",
+    response_model=FileResponse
+)
+async def get_image(image_path: str) -> FileResponse:
+    image_path = f"/static/images/{image_path}"
+
+    if not os.path.exists(image_path):
+        raise HTTPException(status_code=404, detail="Image not found")
+        
+    # media_typeを指定して画像ファイルとして応答
+    return FileResponse(path=image_path, media_type="image/png")

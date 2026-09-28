@@ -311,12 +311,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
 
 @router.get(
-    "/images/{image_path}",
+    "/images/{image_path:path}",
     summary="画像を取得する",
     response_class=FileResponse
 )
 async def get_image(image_path: str) -> FileResponse:
-    file_path = STATIC_DIR / "images" / image_path
+    base_path = STATIC_DIR / "images"
+    file_path = base_path / image_path
+    base_path.resolve()
+    file_path.resolve()
+
+    if not str(file_path).startswith(str(base_path)):
+        raise HTTPException(status_code=400, detail="不正なファイルパスです")
 
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(

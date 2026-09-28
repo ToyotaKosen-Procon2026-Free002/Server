@@ -77,7 +77,7 @@ CREATE TABLE seal_packs_root_tables (
         REFERENCES seal_packs(id)
         ON DELETE CASCADE,
 
-    CONSTRAINT root_table_seal_pack_id
+    CONSTRAINT root_table_seal_id
         FOREIGN KEY (seal_id)
         REFERENCES seals(id)
 );

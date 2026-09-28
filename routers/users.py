@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
@@ -306,15 +307,21 @@ async def get_weekly_missions(device_id: str, db: psycopg.Connection = Depends(g
     return connection.get_or_create_weekly_missions(db, device_id)
 
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
+
 @router.get(
     "/images/{image_path}",
     summary="画像を取得する",
     response_class=FileResponse
 )
 async def get_image(image_path: str) -> FileResponse:
-    image_path = f"./static/images/{image_path}"
+    file_path = STATIC_DIR / "images" / image_path
 
-    if not os.path.exists(image_path):
-        raise HTTPException(status_code=404, detail="Image not found")
-        
-    return FileResponse(path=image_path, media_type="image/png")
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Image not found"
+        )
+
+    return FileResponse(file_path)

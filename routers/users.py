@@ -312,7 +312,7 @@ async def get_weekly_missions(device_id: str, db: psycopg.Connection = Depends(g
     response_class=FileResponse
 )
 async def get_image(image_path: str) -> FileResponse:
-    image_path = f"/static/images/{image_path}"
+    image_path = f"./static/images/{image_path}"
 
     if not os.path.exists(image_path):
         raise HTTPException(status_code=404, detail="Image not found")

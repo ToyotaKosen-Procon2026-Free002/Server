@@ -19,7 +19,7 @@ CREATE TABLE seals (
     description TEXT NOT NULL,
     rarity SMALLINT NOT NULL,
     image_path TEXT NOT NULL,
-    order INT NOT NULL DEFAULT 0,
+    "order" INT NOT NULL DEFAULT 0,
 
     CONSTRAINT seals_rarity
         FOREIGN KEY (rarity)

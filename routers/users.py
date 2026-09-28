@@ -321,7 +321,7 @@ async def get_image(image_path: str) -> FileResponse:
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(
             status_code=404, 
-            detail=f"Image not found"
+            detail=f"Image not found at path: {file_path}"
         )
 
     return FileResponse(file_path)

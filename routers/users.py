@@ -331,3 +331,24 @@ async def get_image(image_path: str) -> FileResponse:
         )
 
     return FileResponse(file_path)
+
+
+
+@router.post(
+    "/seal_pack",
+    summary="指定されたデバイスとして、指定されたシールパックを、指定された回数引く",
+    response_model=list[Seal]
+)
+async def play_seal_pack(pack_id: str, count: int, device_id: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)):
+    """
+    指定されたデバイスとして、指定されたシールパックを、指定された回数引く
+    """
+
+    device = connection.get_device(db, device_id)
+    if not device or device.owner != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。"
+        )
+
+    return connection.play_seal_pack(db, device, pack_id, count)

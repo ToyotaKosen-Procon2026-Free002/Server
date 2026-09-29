@@ -82,6 +82,72 @@ CREATE TABLE seal_packs_root_tables (
         REFERENCES seals(id)
 );
 
+INSERT INTO seal_packs (name, description, once_price, image_path, is_opened) VALUES
+('どうぶつあつまれパック', 'うさぎや柴犬、パンダなど身近などうぶつたちが大集合した基本のパック！', 10, 'seals/usagi.png', TRUE),
+('ファンシーモチーフパック', 'ハートやリボン、お星さまなど可愛らしいデザインを集めたお得なパック！', 8, 'seals/heart.png', TRUE),
+('わくわくレア＆ダイナソーパック', 'トリケラトプスやレアポーズのどうぶつたちが入った豪華なパック！', 20, 'seals/torikeratopusu.png', TRUE);
+
+
+-- パック1: 「どうぶつあつまれパック」の排出設定
+INSERT INTO seal_packs_root_tables (seal_pack_id, seal_id, weight)
+SELECT 
+    p.id AS seal_pack_id,
+    s.id AS seal_id,
+    CASE 
+        WHEN s.rarity = 0 THEN 10.0 -- N (ノーマル): 高確率
+        WHEN s.rarity = 1 THEN 3.0  -- R (レア): 中確率
+        ELSE 1.0
+    END AS weight
+FROM seal_packs p
+CROSS JOIN seals s
+WHERE p.name = 'どうぶつあつまれパック'
+    AND s.name IN (
+        'うさぎ', 'ねむねむうさぎ', 'ひょっこりうさぎ',
+        'しば', 'ふせしば', 'ぴょんしば',
+        'ねこ', 'ぴょんねこ', 'のびねこ',
+        'パンダ', 'たけのこぱんだ',
+        'はむはむ', 'はむカップ'
+    );
+
+
+-- パック2: 「ファンシーモチーフパック」の排出設定
+INSERT INTO seal_packs_root_tables (seal_pack_id, seal_id, weight)
+SELECT 
+    p.id AS seal_pack_id,
+    s.id AS seal_id,
+    CASE 
+        WHEN s.rarity = 0 THEN 10.0
+        WHEN s.rarity = 1 THEN 3.0
+        ELSE 1.0
+    END AS weight
+FROM seal_packs p
+CROSS JOIN seals s
+WHERE p.name = 'ファンシーモチーフパック'
+    AND s.name IN (
+        'ハート', '雲', 'チューリップ', 'リボン', 'スター',
+        'ハートぱんだ', 'ラッキーはむはむ'
+    );
+
+
+-- パック3: 「わくわくレア＆ダイナソーパック」の排出設定
+INSERT INTO seal_packs_root_tables (seal_pack_id, seal_id, weight)
+SELECT 
+    p.id AS seal_pack_id,
+    s.id AS seal_id,
+    CASE 
+        WHEN s.name = 'トリケラトプス' THEN 2.0 -- 目玉のトリケラトプスは低め
+        WHEN s.rarity = 1 THEN 5.0
+        ELSE 10.0
+    END AS weight
+FROM seal_packs p
+CROSS JOIN seals s
+WHERE p.name = 'わくわくレア＆ダイナソーパック'
+    AND s.name IN (
+        'トリケラトプス', 
+        'にんじんうさぎ', 'すやしば', 'ねむねこ', 
+        'ささぱんだ', 'はむはむスター',
+        'スター', 'ハート'
+    );
 
 
 -- ユーザー

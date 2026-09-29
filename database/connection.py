@@ -977,3 +977,119 @@ def claim_mission_reward(db: psycopg.Connection, device_id: str, mission_id: str
         db.commit()
 
     return reward_coins
+
+
+import random
+from fastapi import HTTPException, status
+import psycopg
+from psycopg.rows import dict_row
+
+
+def play_seal_pack(db: psycopg.Connection, device: Device, pack_id: str, count: int = 1) -> list[Seal]:
+    """
+    指定されたデバイスとして、指定されたシールパックを、指定された回数引く
+    """
+    if count <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="ガチャを引く回数は1以上を指定してください。"
+        )
+
+    with db.cursor(row_factory=dict_row) as cur:
+        # 1. パックの存在と販売状態（is_opened）を確認
+        cur.execute(
+            """
+            SELECT id, name, once_price, is_opened 
+            FROM seal_packs 
+            WHERE id = %s;
+            """,
+            (pack_id,)
+        )
+        pack = cur.fetchone()
+
+        if not pack or not pack["is_opened"]:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="指定されたシールパックが存在しないか、現在販売されていません。"
+            )
+
+        total_cost = pack["once_price"] * count
+
+        # 2. デバイスのコイン数をロックして取得（競合・連打防止）
+        cur.execute(
+            "SELECT coins FROM devices WHERE id = %s FOR UPDATE;",
+            (device.id,)
+        )
+        dev_row = cur.fetchone()
+
+        if not dev_row or dev_row["coins"] < total_cost:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"コインが足りません。（必要: {total_cost} コイン, 所持: {dev_row['coins'] if dev_row else 0} コイン）"
+            )
+
+        # 3. パックに登録されているシールと重み（weight）を取得
+        cur.execute(
+            """
+            SELECT 
+                s.id,
+                s.name,
+                s.description,
+                s.rarity,
+                s.image_path,
+                rt.weight
+            FROM seal_packs_root_tables rt
+            JOIN seals s ON rt.seal_id = s.id
+            WHERE rt.seal_pack_id = %s;
+            """,
+            (pack_id,)
+        )
+        candidates = cur.fetchall()
+
+        if not candidates:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="このパックには排出対象のシールが設定されていません。"
+            )
+
+        # 4. コインを消費
+        cur.execute(
+            """
+            UPDATE devices 
+            SET coins = coins - %s 
+            WHERE id = %s;
+            """,
+            (total_cost, device.id)
+        )
+
+        # 5. 重み付きランダム抽選 (Python の random.choices を使用)
+        seals_pool = [
+            Seal(
+                id=str(c["id"]),
+                name=c["name"],
+                description=c["description"],
+                rarity=c["rarity"],
+                image_path=c["image_path"],
+            )
+            for c in candidates
+        ]
+        weights = [c["weight"] for c in candidates]
+
+        # 重み（weight）に基づいて指定回数分（count）抽選
+        drawn_seals = random.choices(seals_pool, weights=weights, k=count)
+
+        # 6. 獲得したシールを所持テーブル (device_seals) に追加
+        for seal in drawn_seals:
+            cur.execute(
+                """
+                INSERT INTO device_seals (device_id, seal_id)
+                VALUES (%s, %s)
+                ON CONFLICT (device_id, seal_id) DO NOTHING;
+                """,
+                (device.id, seal.id)
+            )
+
+        # トランザクション確定
+        db.commit()
+
+    return drawn_seals

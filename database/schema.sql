@@ -20,6 +20,7 @@ CREATE TABLE seals (
     rarity SMALLINT NOT NULL,
     image_path TEXT NOT NULL,
     "order" INT NOT NULL DEFAULT 0,
+    owner UUID NULL DEFAULT NULL,
 
     CONSTRAINT seals_rarity
         FOREIGN KEY (rarity)

@@ -1,10 +1,10 @@
 from datetime import date, timedelta
-
+import random
 from fastapi import HTTPException, status
 import psycopg
 from psycopg.rows import dict_row
 from config import settings
-from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInfoPatchRequest, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser, WeeklyMissionItem
+from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInfoPatchRequest, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, OriginalSealRequest, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser, WeeklyMissionItem
 from typing import Optional
 
 from notify import send_sos_notification
@@ -596,7 +596,8 @@ def get_seals(db: psycopg.Connection) -> list[Seal]:
                 name,
                 description,
                 rarity,
-                image_path
+                image_path,
+                owner
             FROM seals;
             """
         )
@@ -609,6 +610,7 @@ def get_seals(db: psycopg.Connection) -> list[Seal]:
             description=row["description"],
             rarity=row["rarity"],
             image_path=row["image_path"],
+            owner=row["owner"]
         )
         for row in rows
     ]
@@ -985,9 +987,15 @@ import psycopg
 from psycopg.rows import dict_row
 
 
-def play_seal_pack(db: psycopg.Connection, device: Device, pack_id: str, count: int = 1) -> list[Seal]:
+def play_seal_pack(
+    db: psycopg.Connection, 
+    device: Device, 
+    pack_id: str, 
+    count: int = 1
+) -> list[Seal]:
     """
     指定されたデバイスとして、指定されたシールパックを、指定された回数引く
+    （同じシールが重複した場合もそれぞれ新規レコードとして追加）
     """
     if count <= 0:
         raise HTTPException(
@@ -1075,21 +1083,58 @@ def play_seal_pack(db: psycopg.Connection, device: Device, pack_id: str, count: 
         ]
         weights = [c["weight"] for c in candidates]
 
-        # 重み（weight）に基づいて指定回数分（count）抽選
         drawn_seals = random.choices(seals_pool, weights=weights, k=count)
 
-        # 6. 獲得したシールを所持テーブル (device_seals) に追加
-        for seal in drawn_seals:
-            cur.execute(
-                """
-                INSERT INTO device_seals (device_id, seal_id)
-                VALUES (%s, %s)
-                ON CONFLICT (device_id, seal_id) DO NOTHING;
-                """,
-                (device.id, seal.id)
-            )
+        # 6. 獲得したシールを個別のレコードとして一括追加（id は PostgreSQL 側で自動生成）
+        insert_data = [(device.id, seal.id) for seal in drawn_seals]
+        cur.executemany(
+            """
+            INSERT INTO device_seals (device_id, seal_id)
+            VALUES (%s, %s);
+            """,
+            insert_data
+        )
 
         # トランザクション確定
         db.commit()
 
     return drawn_seals
+
+
+def add_original_seal(db: psycopg.Connection, request: OriginalSealRequest, relative_image_path: str) -> Seal:
+    """
+    オリジナルのシールをデータベースに追加する
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        # レアリティの存在チェック
+        cur.execute("SELECT id FROM seal_rarities WHERE id = %s;", (request.rarity,))
+        if not cur.fetchone():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"指定されたレアリティID ({request.rarity}) は存在しません。"
+            )
+
+        # seals テーブルに挿入して作成結果を取得
+        cur.execute(
+            """
+            INSERT INTO seals (name, description, rarity, image_path, owner)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id, name, description, rarity, image_path, owner;
+            """,
+            (request.name, request.description, request.rarity, relative_image_path, request.owner)
+        )
+        new_seal = cur.fetchone()
+        db.commit()
+
+    if new_seal :
+        return Seal(
+            id=str(new_seal["id"]),
+            name=new_seal["name"],
+            description=new_seal["description"],
+            rarity=new_seal["rarity"],
+            image_path=new_seal["image_path"],
+            owner=new_seal["owner"]
+        )
+    else:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="シールのデータベースへの追加に失敗しました")

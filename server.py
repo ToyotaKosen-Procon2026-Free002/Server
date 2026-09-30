@@ -1,4 +1,3 @@
-import firebase_admin
 from firebase_admin import credentials, messaging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,10 +13,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 開発時は "*"、本番は ["https://your-frontend.com"] などに制限
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # GET, POST, OPTIONS などをすべて許可
-    allow_headers=["*"],  # Authorization や Custom Header などをすべて許可
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(users.router)

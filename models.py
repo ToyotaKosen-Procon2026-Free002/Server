@@ -1,3 +1,4 @@
+from fastapi import UploadFile
 from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
@@ -61,6 +62,14 @@ class Seal(BaseModel):
     description: str
     rarity: int
     image_path: str
+    owner: Optional[str] = None
+
+class OriginalSealRequest(BaseModel):
+    name: str
+    description: str
+    rarity: int
+    image: UploadFile
+    owner: str
 
 
 class DeviceInfoPatchRequest(BaseModel):

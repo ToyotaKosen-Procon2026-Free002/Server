@@ -1,12 +1,12 @@
 import os
 from pathlib import Path
-
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
 
 from fastapi.responses import FileResponse
 from auth import get_current_user
-from models import ClaimRewardRequest, ClaimRewardResponse, Device, DeviceInfoPatchRequest, DeviceSeal, Gateway, GatewayInfoPatchRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, Seal, SealPackResponse, SosInfo, SuccessResponse, User, UpdateUser, WeeklyMissionItem
+from models import ClaimRewardRequest, ClaimRewardResponse, Device, DeviceInfoPatchRequest, DeviceSeal, Gateway, GatewayInfoPatchRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, OriginalSealRequest, Seal, SealPackResponse, SosInfo, SuccessResponse, User, UpdateUser, WeeklyMissionItem
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
@@ -331,6 +331,47 @@ async def get_image(image_path: str) -> FileResponse:
         )
 
     return FileResponse(file_path)
+
+@router.post(
+    "/add_original_seal",
+    summary="オリジナルシールを追加する",
+    response_model=Seal
+)
+async def add_original_seal(request: OriginalSealRequest, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> Seal:
+    """
+    オリジナルシールを追加する
+    """
+
+    gateway = connection.get_device(db, request.owner)
+    if not gateway or gateway.owner != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。"
+        )
+
+    extension = Path(request.image.filename).suffix.lower() if request.image.filename else ".png"
+    if extension not in [".png", ".jpg", ".jpeg", ".webp"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="対応していない画像フォーマットです。（許可: .png .jpg .jpeg .webp）"
+        )
+
+    saved_filename = f"original_{uuid.uuid4()}{extension}"
+    save_path = STATIC_DIR / "images" / "seals" / saved_filename
+    relative_image_path = f"seals/{saved_filename}"
+
+    try:
+        content = await request.image.read()
+        with open(save_path, "wb") as f:
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"画像の保存に失敗しました: {str(e)}"
+        )
+
+    return connection.add_original_seal(db, request, relative_image_path)
+
 
 
 

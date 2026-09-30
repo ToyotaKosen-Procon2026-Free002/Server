@@ -3,12 +3,12 @@ from datetime import timezone
 from typing import Annotated
 import psycopg
 import firebase_admin
-from database.connection import get_connection, get_device, get_or_create_user
+from database.connection import get_connection, get_device, get_or_create_user, get_gateway
 from fastapi import Depends, HTTPException, status, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth, credentials
 from cryptography.exceptions import InvalidSignature
-from models import NearbyCommunication, SosRequest, User, Device
+from models import Gateway, NearbyCommunication, SosRequest, User, Device
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes
 
@@ -67,6 +67,37 @@ async def get_current_device(request: Request, device_id: Annotated[str, Header(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"署名の検証に失敗しました: {str(e)}")
 
     return device
+
+
+async def get_current_gateway(request: Request, gateway_id: Annotated[str, Header(alias="X-Gateway-Id")], signature: Annotated[str, Header(alias="X-Gateway-Signature")], db: psycopg.Connection = Depends(get_connection)) -> Gateway:
+    """
+    親機のデバイス認証を行う。
+    """
+
+    gateway = get_gateway(db, gateway_id)
+    if gateway is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="デバイスが見つからなかった、もしくはデータベースに登録されていません。")
+
+    body = await request.body()
+    message = gateway_id.encode() + body
+
+    try:
+        sig_bytes = bytes.fromhex(signature)
+    except ValueError:
+        try:
+            sig_bytes = base64.b64decode(signature)
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="署名がエンコードできませんでした。")
+
+    try:
+        public_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), gateway.public_key)
+        public_key.verify(sig_bytes, message, ec.ECDSA(hashes.SHA256()))
+    except InvalidSignature:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="無効な署名です。")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"署名の検証に失敗しました: {str(e)}")
+
+    return gateway
 
 
 def build_comm_message(comm: NearbyCommunication) -> bytes:

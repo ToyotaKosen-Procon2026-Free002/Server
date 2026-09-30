@@ -610,7 +610,7 @@ def get_seals(db: psycopg.Connection) -> list[Seal]:
             description=row["description"],
             rarity=row["rarity"],
             image_path=row["image_path"],
-            owner=row["owner"]
+            owner=str(row["owner"]) if row["owner"] is not None else None
         )
         for row in rows
     ]
@@ -1134,7 +1134,42 @@ def add_original_seal(db: psycopg.Connection, request: OriginalSealRequest, rela
             description=new_seal["description"],
             rarity=new_seal["rarity"],
             image_path=new_seal["image_path"],
-            owner=new_seal["owner"]
+            owner=str(new_seal["owner"]) if new_seal["owner"] is not None else None
         )
     else:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="シールのデータベースへの追加に失敗しました")
+
+
+def get_original_seals(db: psycopg.Connection, gateway_id: str) -> list[Seal]:
+    """
+    親機が作成したオリジナルシールの一覧を取得する
+    """
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT 
+                id, 
+                name, 
+                description, 
+                rarity, 
+                image_path, 
+                owner 
+            FROM seals 
+            WHERE owner = %s
+            ORDER BY "order" ASC, name ASC;
+            """,
+            (gateway_id,)
+        )
+        rows = cur.fetchall()
+
+    return [
+        Seal(
+            id=str(row["id"]),
+            name=row["name"],
+            description=row["description"],
+            rarity=row["rarity"],
+            image_path=row["image_path"],
+            owner=str(row["owner"]) if row["owner"] is not None else None,
+        )
+        for row in rows
+    ]

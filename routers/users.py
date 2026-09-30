@@ -393,3 +393,24 @@ async def play_seal_pack(pack_id: str, count: int, device_id: str, current_user:
         )
 
     return connection.play_seal_pack(db, device, pack_id, count)
+
+
+
+@router.get(
+    "/original_seals",
+    summary="作成したオリジナルシールの一覧を取得する",
+    response_model=list[Seal]
+)
+async def get_original_seals(gateway_id: str, current_user = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Seal]:
+    """
+    作成したオリジナルシールの一覧を取得する
+    """
+
+    gateway = connection.get_device(db, gateway_id)
+    if not gateway or gateway.owner != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。"
+        )
+
+    return connection.get_original_seals(db, gateway_id)

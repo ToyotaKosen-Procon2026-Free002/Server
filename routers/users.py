@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi.responses import FileResponse
 from auth import get_current_user
-from models import ClaimRewardRequest, ClaimRewardResponse, Device, DeviceInfoPatchRequest, DeviceSeal, Gateway, GatewayInfoPatchRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, OriginalSealRequest, Seal, SealPackResponse, SosInfo, SuccessResponse, User, UpdateUser, WeeklyMissionItem
+from models import ClaimRewardRequest, ClaimRewardResponse, Device, DeviceInfoPatchRequest, DeviceSeal, Gateway, GatewayInfoPatchRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, OriginalSealRequest, PatchDeviceSealRequest, Seal, SealPackResponse, SosInfo, SuccessResponse, User, UpdateUser, WeeklyMissionItem
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
@@ -35,7 +35,7 @@ async def get_me(current_user: User = Depends(get_current_user)) -> User:
 @router.patch(
     "/me",
     summary="現在ログイン中のユーザー情報を更新",
-    response_model=User
+    response_model=User,
 )
 async def update_me(_update_user: UpdateUser, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> User:
     """
@@ -49,7 +49,8 @@ async def update_me(_update_user: UpdateUser, current_user: User = Depends(get_c
 @router.get(
     "/seal_packs",
     summary="現在開催中のシールパック一覧を返す",
-    response_model=list[SealPackResponse]
+    response_model=list[SealPackResponse],
+    tags=["seal"]
 )
 async def get_seal_packs(current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[SealPackResponse]:
     """
@@ -63,7 +64,8 @@ async def get_seal_packs(current_user: User = Depends(get_current_user), db: psy
 @router.get(
     "/my_seals",
     summary="ユーザーが指定したデバイスが所持しているシール一覧を返す",
-    response_model=list[DeviceSeal]
+    response_model=list[DeviceSeal],
+    tags=["seal"]
 )
 async def get_device_seals(device_id: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[DeviceSeal]:
     """
@@ -80,7 +82,8 @@ async def get_device_seals(device_id: str, current_user: User = Depends(get_curr
 @router.post(
     "/notify_token",
     summary="ユーザーのプッシュ通知用トークンを通知する",
-    response_model=SuccessResponse
+    response_model=SuccessResponse,
+    tags=["notify"]
 )
 async def put_notify_token(token: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
     """
@@ -94,7 +97,8 @@ async def put_notify_token(token: str, current_user: User = Depends(get_current_
 @router.delete(
     "/notify_token",
     summary="ユーザーのプッシュ通知用トークンを削除する",
-    response_model=SuccessResponse
+    response_model=SuccessResponse,
+    tags=["notify"]
 )
 async def delete_notify_token(token: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
     """
@@ -109,7 +113,8 @@ async def delete_notify_token(token: str, current_user: User = Depends(get_curre
 @router.get(
     "/seals",
     summary="存在するシールの一覧を返す",
-    response_model=list[Seal]
+    response_model=list[Seal],
+    tags=["seal"]
 )
 async def get_seals(current_user: User =Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Seal]:
     """
@@ -123,7 +128,8 @@ async def get_seals(current_user: User =Depends(get_current_user), db: psycopg.C
 @router.post(
     "/device",
     summary="デバイスを登録",
-    response_model=SuccessResponse
+    response_model=SuccessResponse,
+    tags=["device"]
 )
 async def register_device(device_id: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
     """
@@ -138,7 +144,8 @@ async def register_device(device_id: str, current_user: User = Depends(get_curre
 @router.get(
     "/devices",
     response_model=list[Device],
-    summary="登録済みデバイス一覧を取得"
+    summary="登録済みデバイス一覧を取得",
+    tags=["device"]
 )
 async def get_device(current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Device]:
     """
@@ -151,7 +158,8 @@ async def get_device(current_user: User = Depends(get_current_user), db: psycopg
 @router.post(
     "/gateway",
     summary="親機の登録を行う",
-    response_model=SuccessResponse
+    response_model=SuccessResponse,
+    tags=["gateway"]
 )
 async def register_gateway(gateway_id: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
     """
@@ -166,7 +174,8 @@ async def register_gateway(gateway_id: str, current_user: User = Depends(get_cur
 @router.get(
     "/gateways",
     summary="登録済みの親機一覧を取得",
-    response_model=list[Gateway]
+    response_model=list[Gateway],
+    tags=["gateway"]
 )
 async def get_gateways(current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Gateway]:
     """
@@ -179,7 +188,8 @@ async def get_gateways(current_user: User = Depends(get_current_user), db: psyco
 @router.get(
     "/all_gateways",
     summary="すべての親機の一覧を取得",
-    response_model=list[Gateway]
+    response_model=list[Gateway],
+    tags=["gateway"]
 )
 async def get_all_gateways(current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Gateway]:
     """
@@ -192,7 +202,8 @@ async def get_all_gateways(current_user: User = Depends(get_current_user), db: p
 @router.get(
     "/nearby_communications_log",
     summary="指定したデバイスの、指定した期間のすれ違いログを取得する",
-    response_model=list[NearbyCommunication]
+    response_model=list[NearbyCommunication],
+    tags=["nearby"]
 )
 async def get_nearby_communications_log(request: GetNearbyCommunicationsRequest, db: psycopg.Connection = Depends(get_connection), current_user: User = Depends(get_current_user)) -> list[NearbyCommunication]:
     """
@@ -209,7 +220,8 @@ async def get_nearby_communications_log(request: GetNearbyCommunicationsRequest,
 @router.get(
     "/sos_log",
     summary="指定したデバイスの、指定した期間のSOSログを取得する",
-    response_model=list[SosInfo]
+    response_model=list[SosInfo],
+    tags=["sos"]
 )
 async def get_sos_log(request: GetSosRequest, db: psycopg.Connection = Depends(get_connection), current_user: User = Depends(get_current_user)) -> list[SosInfo]:
     """
@@ -226,7 +238,8 @@ async def get_sos_log(request: GetSosRequest, db: psycopg.Connection = Depends(g
 @router.patch(
     "/device",
     summary="指定したIDのデバイスの情報を更新する",
-    response_model=SuccessResponse
+    response_model=SuccessResponse,
+    tags=["device"]
 )
 async def patch_device_info(request: DeviceInfoPatchRequest, db: psycopg.Connection = Depends(get_connection), current_user: User = Depends(get_current_user)) -> SuccessResponse:
     """
@@ -244,7 +257,8 @@ async def patch_device_info(request: DeviceInfoPatchRequest, db: psycopg.Connect
 @router.patch(
     "/gateway",
     summary="指定したIDの親機の情報を更新する",
-    response_model=SuccessResponse
+    response_model=SuccessResponse,
+    tags=["gateway"]
 )
 async def patch_gateway_info(request: GatewayInfoPatchRequest, db: psycopg.Connection = Depends(get_connection), current_user: User = Depends(get_current_user)) -> SuccessResponse:
     """
@@ -262,7 +276,8 @@ async def patch_gateway_info(request: GatewayInfoPatchRequest, db: psycopg.Conne
 @router.post(
     "/missions/claim",
     summary="ミッション報酬を受け取る",
-    response_model=ClaimRewardResponse
+    response_model=ClaimRewardResponse,
+    tags=["mission"]
 )
 async def claim_reward(request: ClaimRewardRequest, db: psycopg.Connection = Depends(get_connection), current_user: User = Depends(get_current_user)):
     """
@@ -290,7 +305,8 @@ async def claim_reward(request: ClaimRewardRequest, db: psycopg.Connection = Dep
 @router.get(
     "/missions/weekly",
     summary="指定したデバイスの今週のウィークリーミッション一覧を取得する",
-    response_model=list[WeeklyMissionItem]
+    response_model=list[WeeklyMissionItem],
+    tags=["mission"]
 )
 async def get_weekly_missions(device_id: str, db: psycopg.Connection = Depends(get_connection), current_user: User = Depends(get_current_user)) -> list[WeeklyMissionItem]:
     """
@@ -313,7 +329,8 @@ STATIC_DIR = BASE_DIR / "static"
 @router.get(
     "/images/{image_path:path}",
     summary="画像を取得する",
-    response_class=FileResponse
+    response_class=FileResponse,
+    tags=["image"]
 )
 async def get_image(image_path: str) -> FileResponse:
     base_path = STATIC_DIR / "images"
@@ -335,7 +352,8 @@ async def get_image(image_path: str) -> FileResponse:
 @router.post(
     "/add_original_seal",
     summary="オリジナルシールを追加する",
-    response_model=Seal
+    response_model=Seal,
+    tags=["seal"]
 )
 async def add_original_seal(request: OriginalSealRequest, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> Seal:
     """
@@ -378,7 +396,8 @@ async def add_original_seal(request: OriginalSealRequest, current_user: User = D
 @router.post(
     "/seal_pack",
     summary="指定されたデバイスとして、指定されたシールパックを、指定された回数引く",
-    response_model=list[Seal]
+    response_model=list[Seal],
+    tags=["seal"]
 )
 async def play_seal_pack(pack_id: str, count: int, device_id: str, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)):
     """
@@ -399,7 +418,8 @@ async def play_seal_pack(pack_id: str, count: int, device_id: str, current_user:
 @router.get(
     "/original_seals",
     summary="作成したオリジナルシールの一覧を取得する",
-    response_model=list[Seal]
+    response_model=list[Seal],
+    tags=["seal"]
 )
 async def get_original_seals(gateway_id: str, current_user = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Seal]:
     """
@@ -414,3 +434,32 @@ async def get_original_seals(gateway_id: str, current_user = Depends(get_current
         )
 
     return connection.get_original_seals(db, gateway_id)
+
+
+@router.patch(
+    "/device_seal",
+    summary="デバイスが所持しているシールの状態を更新する",
+    response_model=DeviceSeal,
+    tags=["seal"]
+)
+async def patch_device_seal(request: PatchDeviceSealRequest, current_user = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> DeviceSeal:
+    """
+    デバイスが所持しているシールの状態を更新する
+    """
+
+    device = connection.get_device(db, request.device_id)
+    if not device or device.owner != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。"
+        )
+
+    seals = connection.get_device_seals(db, device)
+    is_have = any(seal.id == request.id for seal in seals)
+    if not is_have:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="指定されたidのdevice_sealは存在しません。"
+        )
+
+    return connection.patch_device_seal(db, request)

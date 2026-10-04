@@ -41,6 +41,16 @@ class DeviceSeal(BaseModel):
     book_scale: Optional[float] = None
 
 
+class PatchDeviceSealRequest(BaseModel):
+    device_id: str
+    id: str
+    status_id: int
+    book_page: Optional[int] = None
+    book_x: Optional[float] = None
+    book_y: Optional[float] = None
+    book_rotation: Optional[float] = None
+    book_scale: Optional[float] = None
+
 
 class SealPackRootTable(BaseModel):
     seal_id: str

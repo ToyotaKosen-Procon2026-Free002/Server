@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 import psycopg
 from psycopg.rows import dict_row
 from config import settings
-from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInfoPatchRequest, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, OriginalSealRequest, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser, WeeklyMissionItem
+from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInfoPatchRequest, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, OriginalSealRequest, PatchDeviceSealRequest, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser, WeeklyMissionItem
 from typing import Optional
 
 from notify import send_sos_notification
@@ -981,12 +981,6 @@ def claim_mission_reward(db: psycopg.Connection, device_id: str, mission_id: str
     return reward_coins
 
 
-import random
-from fastapi import HTTPException, status
-import psycopg
-from psycopg.rows import dict_row
-
-
 def play_seal_pack(
     db: psycopg.Connection, 
     device: Device, 
@@ -1173,3 +1167,75 @@ def get_original_seals(db: psycopg.Connection, gateway_id: str) -> list[Seal]:
         )
         for row in rows
     ]
+
+
+
+def patch_device_seal(db: psycopg.Connection, request: PatchDeviceSealRequest) -> DeviceSeal:
+    """
+    指定したデバイスのシールの状態を更新する
+    """
+    # 1. DBのCHECK制約に合わせたバリデーション (status_id=1 のときは配置座標が必須)
+    if request.status_id == 1:
+        if request.book_page is None or request.book_x is None or request.book_y is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="シール帳に配置状態(status_id=1)にする場合は、book_page, book_x, book_y が必須です。"
+            )
+
+    with db.cursor(row_factory=dict_row) as cur:
+        # 2. レコードの更新と所有権のチェック（device_id と id の一致確認）
+        cur.execute(
+            """
+            UPDATE device_seals
+            SET 
+                status_id = %s,
+                book_page = %s,
+                book_x = %s,
+                book_y = %s,
+                book_rotation = %s,
+                book_scale = %s
+            WHERE id = %s AND device_id = %s
+            RETURNING 
+                id, 
+                device_id, 
+                seal_id, 
+                status_id, 
+                book_page, 
+                book_x, 
+                book_y, 
+                book_rotation, 
+                book_scale;
+            """,
+            (
+                request.status_id,
+                request.book_page,
+                request.book_x,
+                request.book_y,
+                request.book_rotation,
+                request.book_scale,
+                request.id,
+                request.device_id,
+            )
+        )
+        updated_row = cur.fetchone()
+
+        # 指定された所持シールが存在しない、または端末の所有権が異なる場合
+        if not updated_row:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="指定された所持シールが見つからないか、デバイスの所有権が不一致です。"
+            )
+
+        db.commit()
+
+    return DeviceSeal(
+        id=str(updated_row["id"]),
+        device_id=str(updated_row["device_id"]),
+        seal_id=str(updated_row["seal_id"]),
+        status_id=updated_row["status_id"],
+        book_page=updated_row["book_page"],
+        book_x=updated_row["book_x"],
+        book_y=updated_row["book_y"],
+        book_rotation=updated_row["book_rotation"],
+        book_scale=updated_row["book_scale"],
+    )

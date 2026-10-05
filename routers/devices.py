@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 import psycopg
-from auth import get_current_device, get_current_user, verify_comm_event_signature, verify_sos_signature
+from auth import get_current_device, get_current_gateway, verify_comm_event_signature, verify_sos_signature
 from database.connection import get_connection, init_new_device, received_sos, update_device_status
 from database import connection
-from models import DeviceInitRequest, DeviceSeal, GatewayInitRequest, User, Device, SuccessResponse, SosRequest, DeviceUpdateRequest
+from models import DeviceInitRequest, DeviceSeal, Gateway, GatewayInitRequest, User, Device, SuccessResponse, SosRequest, DeviceUpdateRequest
 
 
 router = APIRouter(
@@ -95,3 +95,16 @@ async def register_new_gateway(request: GatewayInitRequest, db: psycopg.Connecti
 
     gateway = connection.init_new_gateway(db, request)
     return SuccessResponse(success=True if gateway else False)
+
+
+@router.get(
+    "/gateway",
+    summary="親機が自身の情報を取得する",
+    response_model=Gateway
+)
+async def get_gateway_info(current_gateway: Gateway = Depends(get_current_gateway)) -> Gateway:
+    """
+    親機が自身の情報を取得する。
+    """
+
+    return current_gateway

@@ -21,11 +21,40 @@ firebase_scheme = HTTPBearer(
     description="Firebase ID Token"
 )
 
-async def get_current_user(credentials: Annotated[HTTPAuthorizationCredentials, Depends(firebase_scheme)], db:Annotated[psycopg.Connection, Depends(get_connection)]) -> User:
+def validate_and_parse_p256_pubkey(pubkey_hex: str) -> bytes:
+    """
+    16進数文字列の公開鍵を検証し、非圧縮P-256 (65バイト, 先頭0x04) のバイト列として返す。
+    アクティベート / 親機登録用。
+    """
+    try:
+        pubkey_bytes = bytes.fromhex(pubkey_hex)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="public_key は有効な16進数文字列ではありません。"
+        )
+
+    if len(pubkey_bytes) != 65 or pubkey_bytes[0] != 0x04:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="public_key は先頭が 0x04 の 65 バイト非圧縮 P-256 形式である必要があります。"
+        )
+
+    try:
+        ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), pubkey_bytes)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"無効な P-256 公開鍵です: {str(e)}"
+        )
+
+    return pubkey_bytes
+
+
+async def get_current_user(credentials: Annotated[HTTPAuthorizationCredentials, Depends(firebase_scheme)], db: Annotated[psycopg.Connection, Depends(get_connection)]) -> User:
     """
     Firebase ID Tokenを検証し、認証済みユーザーを返す。
     """
-
     try:
         decoded = auth.verify_id_token(credentials.credentials)
     except Exception:
@@ -42,7 +71,6 @@ async def get_current_device(request: Request, device_id: Annotated[str, Header(
     """
     デバイス認証を行う。
     """
-
     device = get_device(db, device_id)
     if device is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="デバイスが見つからなかった、もしくはデータベースに登録されていません。")
@@ -73,7 +101,6 @@ async def get_current_gateway(request: Request, gateway_id: Annotated[str, Heade
     """
     親機のデバイス認証を行う。
     """
-
     gateway = get_gateway(db, gateway_id)
     if gateway is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="デバイスが見つからなかった、もしくはデータベースに登録されていません。")
@@ -104,29 +131,21 @@ def build_comm_message(comm: NearbyCommunication) -> bytes:
     """
     NearbyCommunication から署名対象のバイト列を決定論的に生成する
     """
-    # 1. UUIDの小文字化
     event_id = comm.event_id.lower()
     my_id = comm.my_id.lower()
     partner_id = comm.partner_id.lower()
     
-    # 2. フラグの 0/1 変換
     gateway_flag = "1" if comm.partner_is_gateway else "0"
     
-    # 3. Optional フィールドの空文字処理
     send_seal = comm.send_seal_id.lower() if comm.send_seal_id else ""
     recv_seal = comm.receive_seal_id.lower() if comm.receive_seal_id else ""
     
-    # 4. UNIXタイムスタンプ（秒単位整数）
-    # time_stamp が timezone 無しの場合は UTC として扱う
     ts = comm.timestamp
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=timezone.utc)
     timestamp_unix = str(int(ts.timestamp()))
 
-    # 5. パイプ区切りで連結
     raw_str = f"{event_id}|{my_id}|{partner_id}|{gateway_flag}|{send_seal}|{recv_seal}|{timestamp_unix}"
-    
-    # UTF-8 バイト列として返却
     return raw_str.encode("utf-8")
 
 
@@ -135,10 +154,15 @@ def verify_comm_event_signature(public_key_bytes: bytes, comm: NearbyCommunicati
     発生元デバイスの公開鍵を使ってイベントデータの署名を検証する。
     """
     message = build_comm_message(comm)
+    
+    try:
+        sig_bytes = bytes.fromhex(comm.signature)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"署名(Hex)のデコードに失敗しました: {comm.event_id}")
+
     try:
         public_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), public_key_bytes)
-        public_key.verify(comm.signature, message, ec.ECDSA(hashes.SHA256()))
-    
+        public_key.verify(sig_bytes, message, ec.ECDSA(hashes.SHA256()))
     except InvalidSignature:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"イベントの認証に失敗しました: {comm.event_id}")
     except Exception as e:
@@ -153,7 +177,6 @@ def build_sos_message(request: SosRequest) -> bytes:
     child_id = request.child_id.lower()
     gateway_id = request.gateway_id.lower()
 
-    # タイムスタンプを UTC UNIX秒（整数）に変換
     t_trigger = request.trigger_timestamp
     if t_trigger.tzinfo is None:
         t_trigger = t_trigger.replace(tzinfo=timezone.utc)
@@ -173,9 +196,15 @@ def verify_sos_signature(public_key_bytes: bytes, request: SosRequest) -> None:
     発生元デバイス（child_id）の公開鍵を使ってSOSデータの署名を検証する。
     """
     message = build_sos_message(request)
+    
+    try:
+        sig_bytes = bytes.fromhex(request.signature)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="SOS署名(Hex)のデコードに失敗しました。")
+
     try:
         public_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), public_key_bytes)
-        public_key.verify(request.signature, message, ec.ECDSA(hashes.SHA256()))
+        public_key.verify(sig_bytes, message, ec.ECDSA(hashes.SHA256()))
     except InvalidSignature:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="SOSイベントの署名検証に失敗しました。")
     except Exception as e:

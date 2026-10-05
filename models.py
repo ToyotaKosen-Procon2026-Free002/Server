@@ -120,14 +120,15 @@ class ClaimRewardResponse(BaseModel):
 
 class DeviceInitRequest(BaseModel):
     device_id: str = Field(..., description="デバイスのUUID")
-    public_key: bytes = Field(..., description="公開鍵")
+    public_key: str = Field(..., description="公開鍵 (16進数文字列)")
     name: Optional[str] = Field(None, description="デバイス名")
 
 
 class GatewayInitRequest(BaseModel):
     id: str
-    public_key: bytes
+    public_key: str = Field(..., description="公開鍵 (16進数文字列)")
     name: Optional[str] = None
+
 
 class Device(BaseModel):
     id: str
@@ -138,6 +139,7 @@ class Device(BaseModel):
     battery: float
     last_timestamp: datetime
 
+
 class Gateway(BaseModel):
     id: str
     public_key: bytes
@@ -147,8 +149,9 @@ class Gateway(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
 
+
 """
-署名バイト列
+署名対象文字列
 {event_id}|{my_id}|{partner_id}|{partner_is_gateway}|{send_seal_id}|{receive_seal_id}|{timestamp_unix}
 """
 class NearbyCommunication(BaseModel):
@@ -159,17 +162,20 @@ class NearbyCommunication(BaseModel):
     send_seal_id: Optional[str] = None
     receive_seal_id: Optional[str] = None
     timestamp: datetime
-    signature: bytes # 送信元デバイスによる署名
+    signature: str = Field(..., description="送信元デバイスによるDER署名 (16進数文字列)")
+
 
 class GetNearbyCommunicationsRequest(BaseModel):
     device_id: str
     start_at: datetime
     end_at: datetime
 
+
 class GetSosRequest(BaseModel):
     device_id: str
     start_at: datetime
     end_at: datetime
+
 
 class DeviceUpdateRequest(BaseModel):
     device_id: str
@@ -177,10 +183,12 @@ class DeviceUpdateRequest(BaseModel):
     timestamp: datetime
     nearby_communications: list[NearbyCommunication]
 
+
 class SosReceiver(BaseModel):
     event_id: str
     gateway_id: str
     received_at: datetime
+
 
 class SosInfo(BaseModel):
     event_id: str
@@ -192,7 +200,7 @@ class SosInfo(BaseModel):
 
 
 """
-署名バイト列
+署名対象文字列
 {event_id}|{child_id}|{gateway_id}|{trigger_timestamp_unix}|{receive_timestamp_unix}
 """
 class SosRequest(BaseModel):
@@ -201,4 +209,4 @@ class SosRequest(BaseModel):
     gateway_id: str
     trigger_timestamp: datetime
     receive_timestamp: datetime
-    signature: bytes
+    signature: str = Field(..., description="DER署名 (16進数文字列)")

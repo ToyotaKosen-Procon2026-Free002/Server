@@ -6,7 +6,6 @@ from psycopg.rows import dict_row
 from config import settings
 from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInfoPatchRequest, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, OriginalSealRequest, PatchDeviceSealRequest, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser, WeeklyMissionItem
 from typing import Optional
-
 from notify import send_sos_notification
 
 def get_connection():
@@ -109,6 +108,7 @@ def init_new_device(db: psycopg.Connection, device_id: str, public_key: bytes, n
     """
 
     with db.cursor(row_factory=dict_row) as cur:
+        # 新規登録を試行
         cur.execute(
             """
             INSERT INTO devices (id, public_key, name)
@@ -121,9 +121,26 @@ def init_new_device(db: psycopg.Connection, device_id: str, public_key: bytes, n
 
         device = cur.fetchone()
 
+        # 既に登録済みのデバイスが存在する場合 (ON CONFLICT)
         if device is None:
-            cur.execute("SELECT id, user_id, name, coins FROM devices WHERE id = %s;", (device_id,))
+            cur.execute(
+                """
+                SELECT id, user_id, name, public_key, coins, battery, last_timestamp 
+                FROM devices 
+                WHERE id = %s;
+                """, 
+                (device_id,)
+            )
             device = cur.fetchone()
+
+            if device:
+                # 既存公開鍵との一致確認（不一致の場合はエラー）
+                saved_pubkey = bytes(device["public_key"])
+                if saved_pubkey != public_key:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="デバイスは既に登録されていますが、公開鍵が一致しません。"
+                    )
 
         db.commit()
 
@@ -137,7 +154,8 @@ def init_new_device(db: psycopg.Connection, device_id: str, public_key: bytes, n
             battery=device["battery"],
             last_timestamp=device["last_timestamp"]
         )
-    else: return None
+    else:
+        return None
 
 
 def init_new_gateway(db: psycopg.Connection, request: GatewayInitRequest) -> Gateway | None:
@@ -736,7 +754,7 @@ def get_nearby_communications_log(db: psycopg.Connection, request: GetNearbyComm
             send_seal_id=str(row["send_seal_id"]) if row["send_seal_id"] else None,
             receive_seal_id=str(row["receive_seal_id"]) if row["receive_seal_id"] else None,
             timestamp=row["detected_at"],
-            signature=b""  # 署名は検証用にのみ使用しDBに保存していないため空バイト列を返却
+            signature=""  # 署名は検証用にのみ使用しDBに保存していないため空バイト列を返却
         )
         for row in rows
     ]

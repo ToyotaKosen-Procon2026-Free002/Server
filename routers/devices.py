@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 import psycopg
-from auth import get_current_device, get_current_gateway, verify_comm_event_signature, verify_sos_signature
+from auth import get_current_device, get_current_gateway, validate_and_parse_p256_pubkey, verify_comm_event_signature, verify_sos_signature
 from database.connection import get_connection, init_new_device, received_sos, update_device_status
 from database import connection
 from models import DeviceInitRequest, DeviceSeal, Gateway, GatewayInitRequest, User, Device, SuccessResponse, SosRequest, DeviceUpdateRequest
@@ -21,8 +21,11 @@ async def register_new_device(req: DeviceInitRequest, db: psycopg.Connection = D
     """
     新しいデバイスをサーバーに初回登録するための関数。
     """
+    # 1. 16進文字列の public_key を検証・バイト列へ変換
+    pubkey_bytes = validate_and_parse_p256_pubkey(req.public_key)
 
-    device = init_new_device(db, req.device_id, req.public_key, req.name)
+    # 2. 初期登録処理を実行
+    device = init_new_device(db, req.device_id, pubkey_bytes, req.name)
     return SuccessResponse(success=True if device else False)
 
 

@@ -1,5 +1,7 @@
+import base64
+
 from fastapi import UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 from datetime import datetime
 from typing import Optional
 
@@ -138,6 +140,10 @@ class Device(BaseModel):
     battery: float
     last_timestamp: datetime
 
+    @field_serializer("public_key")
+    def serialize_public_key(self, public_key: bytes, _info) -> str:
+        return base64.b64encode(public_key).decode("utf-8")
+
 
 class Gateway(BaseModel):
     id: str
@@ -147,6 +153,10 @@ class Gateway(BaseModel):
     user_id: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+
+    @field_serializer("public_key")
+    def serialize_public_key(self, public_key: bytes, _info) -> str:
+        return base64.b64encode(public_key).decode("utf-8")
 
 
 """

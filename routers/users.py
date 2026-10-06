@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from typing import Annotated
 
 from fastapi.responses import FileResponse
@@ -356,7 +356,7 @@ async def get_image(image_path: str) -> FileResponse:
     response_model=Seal,
     tags=["Seal"]
 )
-async def add_original_seal(request: OriginalSealRequest, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> Seal:
+async def add_original_seal(request: OriginalSealRequest, image: UploadFile, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> Seal:
     """
     オリジナルシールを追加する
     """
@@ -368,7 +368,7 @@ async def add_original_seal(request: OriginalSealRequest, current_user: User = D
             detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。"
         )
 
-    extension = Path(request.image.filename).suffix.lower() if request.image.filename else ".png"
+    extension = Path(image.filename).suffix.lower() if image.filename else ".png"
     if extension not in [".png", ".jpg", ".jpeg", ".webp"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -380,7 +380,7 @@ async def add_original_seal(request: OriginalSealRequest, current_user: User = D
     relative_image_path = f"seals/{saved_filename}"
 
     try:
-        content = await request.image.read()
+        content = await image.read()
         with open(save_path, "wb") as f:
             f.write(content)
     except Exception as e:

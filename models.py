@@ -78,7 +78,6 @@ class OriginalSealRequest(BaseModel):
     name: str
     description: str
     rarity: int
-    image: UploadFile
     owner: str
 
 

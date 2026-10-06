@@ -356,10 +356,17 @@ async def get_image(image_path: str) -> FileResponse:
     response_model=Seal,
     tags=["Seal"]
 )
-async def add_original_seal(request: OriginalSealRequest, image: UploadFile, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> Seal:
+async def add_original_seal(name: str, description: str, rarity: int, owner: str, image: UploadFile, current_user: User = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> Seal:
     """
     オリジナルシールを追加する
     """
+
+    request = OriginalSealRequest(
+        name=name,
+        description=description,
+        rarity=rarity,
+        owner=owner
+    )
 
     gateway = connection.get_device(db, request.owner)
     if not gateway or gateway.owner != current_user.id:

@@ -325,7 +325,8 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
                 """
                 INSERT INTO encounters (request_id, device_id, opponent_device_id, gateway_id, detected_at, send_seal_id, receive_seal_id)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (request_id) DO NOTHING;
+                ON CONFLICT (request_id) DO NOTHING
+                RETURNING *;
                 """,
                 (comm.event_id, origin_device.id, opponent_device_id, gateway_id, comm.timestamp, comm.send_seal_id, comm.receive_seal_id)
             )

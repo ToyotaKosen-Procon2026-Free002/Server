@@ -375,6 +375,15 @@ CREATE TABLE weekly_missions (
     is_active BOOLEAN NOT NULL DEFAULT TRUE  -- 現在採用されているミッションか
 );
 
+INSERT INTO weekly_missions (title, description, target_type, target_value, reward_coins, is_active) VALUES
+('親機とすれ違おう', '街中の親機（Gateway）と1回すれ違い通信を行おう', 'ENCOUNTER_GATEWAY', 1, 100, TRUE),
+('街をたくさん探索しよう', '親機（Gateway）と合計3回すれ違い通信を行おう', 'ENCOUNTER_GATEWAY', 3, 250, TRUE),
+('おともだち発見！', '他の子機（デバイス）と1回すれ違おう', 'ENCOUNTER_DEVICE', 1, 100, TRUE),
+('シールを集めよう', 'シールを新たに1枚獲得しよう', 'GET_SEAL', 1, 150, TRUE),
+('運試し！シールパック', 'シールパック（ガチャ）を1回引こう', 'PLAY_GACHA', 1, 50, TRUE),
+('みんなを助けよう', 'SOS信号を受信して1回助けに向かおう', 'SOS_HELP', 1, 300, TRUE),
+('シール帳をデコろう', 'シール帳にシールを1枚配置しよう', 'PLACE_SEAL', 1, 50, TRUE);
+
 CREATE TABLE device_mission_progress (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     device_id UUID NOT NULL,

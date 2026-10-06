@@ -464,3 +464,24 @@ async def patch_device_seal(request: PatchDeviceSealRequest, current_user = Depe
         )
 
     return connection.patch_device_seal(db, request)
+
+
+@router.get(
+    "/device_seal_book",
+    summary="デバイスのシール図鑑に登録されているシール一覧を返す。",
+    response_model=list[Seal],
+    tags=["Seal"]
+)
+async def get_device_seal_book(device_id: str, current_user = Depends(get_current_user), db: psycopg.Connection = Depends(get_connection)) -> list[Seal]:
+    """
+    デバイスのシール図鑑に登録されているシール一覧を返す。
+    """
+
+    device = connection.get_device(db, device_id)
+    if not device or device.owner != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。"
+        )
+
+    return connection.get_device_seal_book(db, device_id)

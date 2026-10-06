@@ -239,6 +239,25 @@ CREATE TABLE device_seals (
 );
 
 
+CREATE TABLE device_seal_book (
+    device_id UUID NOT NULL,
+    seal_id UUID NOT NULL,
+
+    CONSTRAINT pk_device_seal_book 
+        PRIMARY KEY (device_id, seal_id),
+
+    CONSTRAINT device_seal_book_device_id
+        FOREIGN KEY (device_id)
+        REFERENCES devices(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT device_seal_book_seal_id
+        FOREIGN KEY (seal_id)
+        REFERENCES seals(id)
+        ON DELETE CASCADE
+);
+
+
 -- 親機
 
 CREATE TABLE gateways (

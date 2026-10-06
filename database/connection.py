@@ -361,6 +361,15 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
                         """,
                         (origin_device.id, comm.receive_seal_id)
                     )
+
+                    cur.execute(
+                        """
+                        INSERT INTO device_seal_book (device_id, seal_id)
+                        VALUES (%s, %s)
+                        ON CONFLICT (device_id, seal_id) DO NOTHING;
+                        """,
+                        (origin_device.id, comm.receive_seal_id)
+                    )
         
         db.commit()
 
@@ -1107,6 +1116,15 @@ def play_seal_pack(
             insert_data
         )
 
+        cur.executemany(
+            """
+            INSERT INTO device_seal_book (device_id, seal_id)
+            VALUES (%s, %s)
+            ON CONFLICT (device_id, seal_id) DO NOTHING;
+            """,
+            insert_data
+        )
+
         # トランザクション確定
         db.commit()
 
@@ -1257,3 +1275,41 @@ def patch_device_seal(db: psycopg.Connection, request: PatchDeviceSealRequest) -
         book_rotation=updated_row["book_rotation"],
         book_scale=updated_row["book_scale"],
     )
+
+
+def get_device_seal_book(db: psycopg.Connection, device_id: str) -> list[Seal]:
+    """
+    指定されたデバイスのシール図鑑に登録されているシールを返す。
+    一度でも所持したものは返される。
+    """
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT 
+                s.id,
+                s.name,
+                s.description,
+                s.rarity,
+                s.image_path,
+                s.owner
+            FROM device_seal_book dsb
+            JOIN seals s ON dsb.seal_id = s.id
+            WHERE dsb.device_id = %s
+            ORDER BY s."order" ASC, s.name ASC;
+            """,
+            (device_id,)
+        )
+        rows = cur.fetchall()
+
+    return [
+        Seal(
+            id=str(row["id"]),
+            name=row["name"],
+            description=row["description"],
+            rarity=row["rarity"],
+            image_path=row["image_path"],
+            owner=str(row["owner"]) if row["owner"] is not None else None,
+        )
+        for row in rows
+    ]

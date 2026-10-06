@@ -384,6 +384,9 @@ INSERT INTO weekly_missions (title, description, target_type, target_value, rewa
 ('みんなを助けよう', 'SOS信号を受信して1回助けに向かおう', 'SOS_HELP', 1, 300, TRUE),
 ('シール帳をデコろう', 'シール帳にシールを1枚配置しよう', 'PLACE_SEAL', 1, 50, TRUE);
 
+-- 実装済み
+-- ENCOUNTER_GATEWAY, ENCOUNTER_DEVICE, GET_SEAL, PLAY_GACHA, PLACE_SEAL
+
 CREATE TABLE device_mission_progress (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     device_id UUID NOT NULL,

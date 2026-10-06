@@ -371,7 +371,15 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
                         """,
                         (origin_device.id, comm.receive_seal_id)
                     )
-        
+
+                if comm.partner_is_gateway:
+                    increment_mission_progress(db, comm.my_id, "ENCOUNTER_GATEWAY")
+                else:
+                    increment_mission_progress(db, comm.my_id, "ENCOUNTER_DEVICE")
+
+                if comm.receive_seal_id:
+                    increment_mission_progress(db, comm.my_id, "GET_SEAL")
+                
         db.commit()
 
 
@@ -983,6 +991,33 @@ def get_or_create_weekly_missions(
         ]
 
 
+def increment_mission_progress(db: psycopg.Connection, device_id: str, target_type: str, increment: int = 1) -> None:
+    """指定された target_type の今週のミッション進捗を加算・更新する"""
+    week_start = get_current_week_start()
+
+    # 割り当てがまだなら自動で作成
+    get_or_create_weekly_missions(db, device_id)
+
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            UPDATE device_mission_progress p
+            SET 
+                current_value = LEAST(p.current_value + %s, m.target_value),
+                is_completed = (p.current_value + %s) >= m.target_value,
+                updated_at = NOW()
+            FROM weekly_missions m
+            WHERE p.mission_id = m.id
+                AND p.device_id = %s
+                AND p.week_start_date = %s
+                AND m.target_type = %s
+                AND p.is_completed = FALSE;
+            """,
+            (increment, increment, device_id, week_start, target_type),
+        )
+        db.commit()
+
+
 def claim_mission_reward(db: psycopg.Connection, device_id: str, mission_id: str, week_start_date: date) -> int:
     """
     ミッション報酬を受け取り、デバイスのコインを増やす。
@@ -1034,12 +1069,7 @@ def claim_mission_reward(db: psycopg.Connection, device_id: str, mission_id: str
     return reward_coins
 
 
-def play_seal_pack(
-    db: psycopg.Connection, 
-    device: Device, 
-    pack_id: str, 
-    count: int = 1
-) -> list[Seal]:
+def play_seal_pack(db: psycopg.Connection, device: Device, pack_id: str, count: int = 1) -> list[Seal]:
     """
     指定されたデバイスとして、指定されたシールパックを、指定された回数引く
     （同じシールが重複した場合もそれぞれ新規レコードとして追加）
@@ -1150,6 +1180,9 @@ def play_seal_pack(
             """,
             insert_data
         )
+
+        increment_mission_progress(db, device.id, "PLAY_GACHA", count)
+        increment_mission_progress(db, device.id, "GET_SEAL", count)
 
         # トランザクション確定
         db.commit()
@@ -1287,6 +1320,9 @@ def patch_device_seal(db: psycopg.Connection, request: PatchDeviceSealRequest) -
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="指定された所持シールが見つからないか、デバイスの所有権が不一致です。"
             )
+
+        if request.status_id == 1:
+            increment_mission_progress(db, request.device_id, "PLACE_SEAL")
 
         db.commit()
 

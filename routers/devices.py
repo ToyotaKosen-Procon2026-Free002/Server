@@ -111,3 +111,12 @@ async def get_gateway_info(current_gateway: Gateway = Depends(get_current_gatewa
     """
 
     return current_gateway
+
+
+@router.get(
+    "/device",
+    summary="子機が自身の情報を取得する",
+    response_model=Device
+)
+async def get_device_info(current_device: Device = Depends(get_current_device)) -> Device:
+    return current_device

@@ -3,3 +3,4 @@ firebase_admin
 uvicorn
 psycopg
 cryptography
+python-multipart

@@ -171,6 +171,7 @@ class NearbyCommunication(BaseModel):
     send_seal_id: Optional[str] = None
     receive_seal_id: Optional[str] = None
     timestamp: datetime
+    partner_name: str
     signature: str = Field(..., description="送信元デバイスによるDER署名 (16進数文字列)")
 
 

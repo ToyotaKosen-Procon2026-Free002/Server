@@ -740,18 +740,21 @@ def get_nearby_communications_log(db: psycopg.Connection, request: GetNearbyComm
         cur.execute(
             """
             SELECT 
-                request_id,
-                device_id,
-                opponent_device_id,
-                gateway_id,
-                send_seal_id,
-                receive_seal_id,
-                detected_at
-            FROM encounters
-            WHERE device_id = %s AND detected_at BETWEEN %s AND %s
-            ORDER BY detected_at DESC;
+                e.request_id,
+                e.device_id,
+                e.opponent_device_id,
+                e.gateway_id,
+                COALESCE(g.name, d.name) AS partner_name,
+                e.send_seal_id,
+                e.receive_seal_id,
+                e.detected_at
+            FROM encounters e
+            LEFT JOIN devices d ON e.opponent_device_id = d.id
+            LEFT JOIN gateways g ON e.gateway_id = g.id
+            WHERE e.device_id = %s AND e.detected_at BETWEEN %s AND %s
+            ORDER BY e.detected_at DESC;
             """,
-            (request.device_id, request.start_at, request.end_at)
+            (request.device_id, request.start_at, request.end_at),
         )
         rows = cur.fetchall()
 
@@ -760,11 +763,16 @@ def get_nearby_communications_log(db: psycopg.Connection, request: GetNearbyComm
             event_id=str(row["request_id"]),
             my_id=str(row["device_id"]),
             partner_id=str(row["gateway_id"] or row["opponent_device_id"]),
+            partner_name=row["partner_name"],
             partner_is_gateway=row["gateway_id"] is not None,
-            send_seal_id=str(row["send_seal_id"]) if row["send_seal_id"] else None,
-            receive_seal_id=str(row["receive_seal_id"]) if row["receive_seal_id"] else None,
+            send_seal_id=str(row["send_seal_id"])
+            if row["send_seal_id"]
+            else None,
+            receive_seal_id=str(row["receive_seal_id"])
+            if row["receive_seal_id"]
+            else None,
             timestamp=row["detected_at"],
-            signature=""  # 署名は検証用にのみ使用しDBに保存していないため空バイト列を返却
+            signature="",
         )
         for row in rows
     ]

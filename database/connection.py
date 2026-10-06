@@ -875,16 +875,18 @@ def get_current_week_start() -> date:
     return today - timedelta(days=today.weekday())
 
 
-def get_or_create_weekly_missions(db: psycopg.Connection, device_id: str) -> list[WeeklyMissionItem]:
+def get_or_create_weekly_missions(
+    db: psycopg.Connection, device_id: str
+) -> list[WeeklyMissionItem]:
     """
-    指定したデバイスのウィークリーミッションを、取得する。
-    なければ作成して返す。
+    指定したデバイスの今週のウィークリーミッションを取得する。
+    まだ無ければアクティブなものからランダムに3つ選んで作成・保存する。
     """
 
     week_start = get_current_week_start()
 
     with db.cursor(row_factory=dict_row) as cur:
-        # 1. アクティブな全ミッションと、現在のデバイスの今週の進捗を LEFT JOIN で取得
+        # 1. すでに今週分として保存されているミッション進捗を取得
         cur.execute(
             """
             SELECT 
@@ -894,68 +896,83 @@ def get_or_create_weekly_missions(db: psycopg.Connection, device_id: str) -> lis
                 m.target_type,
                 m.target_value,
                 m.reward_coins,
-                COALESCE(p.current_value, 0) AS current_value,
-                COALESCE(p.is_completed, FALSE) AS is_completed,
-                COALESCE(p.is_claimed, FALSE) AS is_claimed
-            FROM weekly_missions m
-            LEFT JOIN device_mission_progress p 
-                ON m.id = p.mission_id 
-                AND p.device_id = %s 
+                p.current_value,
+                p.is_completed,
+                p.is_claimed
+            FROM device_mission_progress p
+            JOIN weekly_missions m ON p.mission_id = m.id
+            WHERE p.device_id = %s 
                 AND p.week_start_date = %s
-            WHERE m.is_active = TRUE;
+                AND m.is_active = TRUE;
             """,
-            (device_id, week_start)
+            (device_id, week_start),
         )
-        rows = cur.fetchall()
+        existing_rows = cur.fetchall()
 
-    return [
-        WeeklyMissionItem(
-            mission_id=str(row["mission_id"]),
-            title=row["title"],
-            description=row["description"],
-            target_type=row["target_type"],
-            target_value=row["target_value"],
-            current_value=row["current_value"],
-            reward_coins=row["reward_coins"],
-            is_completed=row["is_completed"],
-            is_claimed=row["is_claimed"],
-        )
-        for row in rows
-    ]
+        # すでにミッションが割り振られていればそれを返す
+        if existing_rows:
+            return [
+                WeeklyMissionItem(
+                    mission_id=str(row["mission_id"]),
+                    title=row["title"],
+                    description=row["description"],
+                    target_type=row["target_type"],
+                    target_value=row["target_value"],
+                    current_value=row["current_value"],
+                    reward_coins=row["reward_coins"],
+                    is_completed=row["is_completed"],
+                    is_claimed=row["is_claimed"],
+                )
+                for row in existing_rows
+            ]
 
-
-def increment_mission_progress(db: psycopg.Connection, device_id: str, target_type: str, amount: int = 1):
-    """
-    ミッションの進捗更新を行う。
-    """
-
-    week_start = get_current_week_start()
-
-    with db.cursor() as cur:
-        # 該当するアクティブミッションを取得して進捗を更新（UPSERT）
+        # 2. まだ割り振られていない場合、アクティブなミッションからランダムに3つ取得
         cur.execute(
             """
-            INSERT INTO device_mission_progress (device_id, mission_id, week_start_date, current_value, is_completed)
-            SELECT 
-                %s, 
-                m.id, 
-                %s, 
-                %s, 
-                (%s >= m.target_value)
-            FROM weekly_missions m
-            WHERE m.target_type = %s AND m.is_active = TRUE
-            ON CONFLICT (device_id, mission_id, week_start_date) 
-            DO UPDATE SET 
-                current_value = device_mission_progress.current_value + EXCLUDED.current_value,
-                is_completed = (device_mission_progress.current_value + EXCLUDED.current_value) >= (
-                    SELECT target_value FROM weekly_missions WHERE id = EXCLUDED.mission_id
-                ),
-                updated_at = NOW()
-            WHERE device_mission_progress.is_completed = FALSE; -- 既に達成済みの場合は更新しない
+            SELECT id, title, description, target_type, target_value, reward_coins
+            FROM weekly_missions
+            WHERE is_active = TRUE
+            ORDER BY RANDOM()
+            LIMIT 3;
+            """
+        )
+        selected_missions = cur.fetchall()
+
+        if not selected_missions:
+            return []
+
+        # 3. 選定した3つのミッションを進捗テーブル（device_mission_progress）に一括登録
+        insert_data = [
+            (device_id, m["id"], week_start, 0, False, False)
+            for m in selected_missions
+        ]
+        cur.executemany(
+            """
+            INSERT INTO device_mission_progress (
+                device_id, mission_id, week_start_date, current_value, is_completed, is_claimed
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (device_id, mission_id, week_start_date) DO NOTHING;
             """,
-            (device_id, week_start, amount, amount, target_type)
+            insert_data,
         )
         db.commit()
+
+        # 4. レスポンス用のリストにして返す
+        return [
+            WeeklyMissionItem(
+                mission_id=str(m["id"]),
+                title=m["title"],
+                description=m["description"],
+                target_type=m["target_type"],
+                target_value=m["target_value"],
+                current_value=0,
+                reward_coins=m["reward_coins"],
+                is_completed=False,
+                is_claimed=False,
+            )
+            for m in selected_missions
+        ]
 
 
 def claim_mission_reward(db: psycopg.Connection, device_id: str, mission_id: str, week_start_date: date) -> int:

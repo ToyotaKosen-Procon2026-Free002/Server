@@ -368,8 +368,8 @@ async def add_original_seal(name: str, description: str, rarity: int, owner: str
         owner=owner
     )
 
-    gateway = connection.get_device(db, request.owner)
-    if not gateway or gateway.owner != current_user.id:
+    gateway = connection.get_gateway(db, request.owner)
+    if not gateway or gateway.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="存在しないデバイスを指定しているか、所持していないデバイスを指定しています。"

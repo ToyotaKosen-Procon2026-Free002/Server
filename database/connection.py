@@ -365,6 +365,15 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
 
                     cur.execute(
                         """
+                        UPDATE devices
+                        SET coins = coins + 5
+                        WHERE id = %s;
+                        """,
+                        (origin_device.id)
+                    )
+
+                    cur.execute(
+                        """
                         INSERT INTO device_seal_book (device_id, seal_id)
                         VALUES (%s, %s)
                         ON CONFLICT (device_id, seal_id) DO NOTHING;

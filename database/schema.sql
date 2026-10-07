@@ -29,32 +29,32 @@ CREATE TABLE seals (
 
 
 INSERT INTO seals (name, description, rarity, image_path, "order") VALUES
-('うさぎ', '大きな耳と広い視野で敵をいち早く察知できるよ', 0, 'seals/usagi.png', 1),
-('ねむねむうさぎ', '寝ている時は鼻のヒクヒクがとまるよ', 0, 'seals/nemunemu_usagi.png', 2),
-('ひょっこりうさぎ', '大きな耳は温度調節にも使われてるよ', 1, 'seals/hyokkori_usagi.png', 3),
-('にんじんうさぎ', 'ここだけの話、本当に好きな食べ物は葉っぱだよ', 1, 'seals/ninzin_usagi.png', 4),
-('しば', '柴犬は国の天然記念物にも指定されてるよ', 0, 'seals/siba.png', 5),
-('ふせしば', 'オオカミに最も近い犬種って言われてるよ', 0, 'seals/fuse_siba.png', 6),
-('ぴょんしば', '柴犬はツンデレだよ', 1, 'seals/pyon_siba.png', 7),
-('すやしば', '急所であるお腹を隠して眠っているよ', 1, 'seals/suya_siba.png', 8),
-('ねこ', '1日のうち12時間〜16時間を睡眠に使うよ', 0, 'seals/neko.png', 9),
-('ぴょんねこ', 'ジャンプ力は身長の約5倍だよ', 0, 'seals/pyon_neko.png', 10),
+('うさぎ', 'おおきなみみとひろいしやでてきをいちはやくさっちできるよ', 0, 'seals/usagi.png', 1),
+('ねむねむうさぎ', 'ねているときははなのヒクヒクがとまるよ', 0, 'seals/nemunemu_usagi.png', 2),
+('ひょっこりうさぎ', 'おおきなみみはおんどちょうせつにもつかわれてるよ', 1, 'seals/hyokkori_usagi.png', 3),
+('にんじんうさぎ', 'ここだけのはなし、ほんとうにすきなたべものははっぱだよ', 1, 'seals/ninzin_usagi.png', 4),
+('しば', 'しばいぬはくにのてんねんきねんぶつにもしていされてるよ', 0, 'seals/siba.png', 5),
+('ふせしば', 'オオカミにもっともちかいけんしゅっていわれてるよ', 0, 'seals/fuse_siba.png', 6),
+('ぴょんしば', 'しばいぬはツンデレだよ', 1, 'seals/pyon_siba.png', 7),
+('すやしば', 'きゅうしょであるおなかをかくしてねむっているよ', 1, 'seals/suya_siba.png', 8),
+('ねこ', '1にちのうち12じかん〜16じかんをすいみんにつかうよ', 0, 'seals/neko.png', 9),
+('ぴょんねこ', 'ジャンプりょくはしんちょうのやく5ばいだよ', 0, 'seals/pyon_neko.png', 10),
 ('のびねこ', 'おヒゲはセンサーだよ', 1, 'seals/nobi_neko.png', 11),
-('ねむねこ', '本気で走るとウサイン・ボルト選手よりも速いよ！', 1, 'seals/nemu_neko.png', 12),
-('パンダ', '生まれたばかりの赤ちゃんは100〜150gくらいしかないよ', 0, 'seals/panda.png', 13),
-('たけのこぱんだ', '実は竹よりたけのこの方が栄養が高くておきにいり！', 0, 'seals/takenoko_panda.png', 14),
-('ハートぱんだ', 'パンダのうんちは全く臭くないよ！', 1, 'seals/heart_panda.png', 15),
-('ささぱんだ', '手のひらに第6と第7の指があるよ', 1, 'seals/sasa_panda.png', 16),
-('はむはむ', '前歯が一生伸び続けるよ', 0, 'seals/hamuhamu.png', 17),
-('はむカップ', '実はねほっぺがお尻まで伸びるよ', 0, 'seals/hamu_kappu.png', 18),
-('ラッキーはむはむ', 'ハムスターには世界がモノクロに見えてるよ', 1, 'seals/rakki-_hamuhamu.png', 19),
-('はむはむスター', '超がつくほどの一匹狼。１ケージに１匹が鉄則だよ', 1, 'seals/hamuhamu_star.png', 20),
-('ハート', '赤色のハートの意味は愛してるだよ', 0, 'seals/heart.png', 21),
-('雲', '大きな雲は実は重いよ', 0, 'seals/kumo.png', 22),
-('チューリップ', '花言葉は思いやりだよ', 0, 'seals/tyu-rippu.png', 23),
-('リボン', 'ピンク色のりぼんだよ', 0, 'seals/ribonn.png', 24),
-('スター', '一番熱い星は青色だよ！', 0, 'seals/star.png', 25),
-('トリケラトプス', '何百本もの歯をもってるよ', 1, 'seals/torikeratopusu.png', 26);
+('ねむねこ', 'ほんきではしるとウサイン・ボルトせんしゅよりもはやいよ！', 1, 'seals/nemu_neko.png', 12),
+('パンダ', 'うまれたばかりのあかちゃんは100〜150gくらいしかないよ', 0, 'seals/panda.png', 13),
+('たけのこぱんだ', 'じつはたけよりたけのこのほうがえいようがたかくておきにいり！', 0, 'seals/takenoko_panda.png', 14),
+('ハートぱんだ', 'パンダのうんちはまったくくさくないよ！', 1, 'seals/heart_panda.png', 15),
+('ささぱんだ', 'てのひらにだい6とだい7のゆびがあるよ', 1, 'seals/sasa_panda.png', 16),
+('はむはむ', 'まえばがいっしょうのびつづけるよ', 0, 'seals/hamuhamu.png', 17),
+('はむカップ', 'じつはねほっぺがおしりまでのびるよ', 0, 'seals/hamu_kappu.png', 18),
+('ラッキーはむはむ', 'ハムスターにはせかいがモノクロにみえてるよ', 1, 'seals/rakki-_hamuhamu.png', 19),
+('はむはむスター', 'ちょうがつくほどのいっぴきおおかみ。1ケージに1ぴきがてっそくだよ', 1, 'seals/hamuhamu_star.png', 20),
+('ハート', 'あかいろのハートのいみはあいしてるだよ', 0, 'seals/heart.png', 21),
+('くも', 'おおきなくもはじつはおもいよ', 0, 'seals/kumo.png', 22),
+('チューリップ', 'はなことばはおもいやりだよ', 0, 'seals/tyu-rippu.png', 23),
+('リボン', 'ピンクいろのりぼんだよ', 0, 'seals/ribonn.png', 24),
+('スター', 'いちばんあついほしはあおいろだよ！', 0, 'seals/star.png', 25),
+('トリケラトプス', 'なんひゃくほんもののはをもってるよ', 1, 'seals/torikeratopusu.png', 26);
 
 
 
@@ -84,9 +84,9 @@ CREATE TABLE seal_packs_root_tables (
 );
 
 INSERT INTO seal_packs (name, description, once_price, image_path, is_opened) VALUES
-('どうぶつあつまれパック', 'うさぎや柴犬、パンダなど身近などうぶつたちが大集合した基本のパック！', 10, 'seals/usagi.png', TRUE),
-('ファンシーモチーフパック', 'ハートやリボン、お星さまなど可愛らしいデザインを集めたお得なパック！', 8, 'seals/heart.png', TRUE),
-('わくわくレア＆ダイナソーパック', 'トリケラトプスやレアポーズのどうぶつたちが入った豪華なパック！', 20, 'seals/torikeratopusu.png', TRUE);
+('どうぶつあつまれパック', 'うさぎやしばいぬ、パンダなどみぢかなどうぶつたちがだいしゅうごうしたきほんのパック！', 10, 'seals/usagi.png', TRUE),
+('ファンシーモチーフパック', 'ハートやリボン、おほしさまなどかわいらしいデザインをあつめたおとくなパック！', 8, 'seals/heart.png', TRUE),
+('わくわくレア＆ダイナソーパック', 'トリケラトプスやレアポーズのどうぶつたちがはいったごうかなパック！', 20, 'seals/torikeratopusu.png', TRUE);
 
 
 -- パック1: 「どうぶつあつまれパック」の排出設定
@@ -125,7 +125,7 @@ FROM seal_packs p
 CROSS JOIN seals s
 WHERE p.name = 'ファンシーモチーフパック'
     AND s.name IN (
-        'ハート', '雲', 'チューリップ', 'リボン', 'スター',
+        'ハート', 'くも', 'チューリップ', 'リボン', 'スター',
         'ハートぱんだ', 'ラッキーはむはむ'
     );
 
@@ -376,13 +376,13 @@ CREATE TABLE weekly_missions (
 );
 
 INSERT INTO weekly_missions (title, description, target_type, target_value, reward_coins, is_active) VALUES
-('親機とすれ違おう', '街中の親機（Gateway）と1回すれ違い通信を行おう', 'ENCOUNTER_GATEWAY', 1, 100, TRUE),
-('街をたくさん探索しよう', '親機（Gateway）と合計3回すれ違い通信を行おう', 'ENCOUNTER_GATEWAY', 3, 250, TRUE),
-('おともだち発見！', '他の子機（デバイス）と1回すれ違おう', 'ENCOUNTER_DEVICE', 1, 100, TRUE),
-('シールを集めよう', 'シールを新たに1枚獲得しよう', 'GET_SEAL', 1, 150, TRUE),
-('運試し！シールパック', 'シールパック（ガチャ）を1回引こう', 'PLAY_GACHA', 1, 50, TRUE),
-('みんなを助けよう', 'SOS信号を受信して1回助けに向かおう', 'SOS_HELP', 1, 300, TRUE),
-('シール帳をデコろう', 'シール帳にシールを1枚配置しよう', 'PLACE_SEAL', 1, 50, TRUE);
+('おやきとすれちがおう', 'まちなかのおやき（Gateway）と1かいすれちがいつうしんをおこなおう', 'ENCOUNTER_GATEWAY', 1, 100, TRUE),
+('まちをたくさんたんさくしよう', 'おやき（Gateway）をごうけい3かいすれちがいつうしんをおこなおう', 'ENCOUNTER_GATEWAY', 3, 250, TRUE),
+('おともだちはっけん！', 'ほかのこき（デバイス）と1かいすれちがおう', 'ENCOUNTER_DEVICE', 1, 100, TRUE),
+('シールをあつめよう', 'シールをあらたに1まいかくとくしよう', 'GET_SEAL', 1, 150, TRUE),
+('うんだめし！シールパック', 'シールパック（ガチャ）を1かいひこう', 'PLAY_GACHA', 1, 50, TRUE),
+('みんなをたすけよう', 'SOSしんごうをじゅしんして1かいたすけにむかおう', 'SOS_HELP', 1, 300, TRUE),
+('シールちょうをデコろう', 'シールちょうにシールを1まいはいちしよう', 'PLACE_SEAL', 1, 50, TRUE);
 
 -- 実装済み
 -- ENCOUNTER_GATEWAY, ENCOUNTER_DEVICE, GET_SEAL, PLAY_GACHA, PLACE_SEAL

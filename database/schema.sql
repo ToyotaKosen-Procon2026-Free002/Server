@@ -85,7 +85,6 @@ CREATE TABLE seal_packs_root_tables (
 
 INSERT INTO seal_packs (name, description, once_price, image_path, is_opened) VALUES
 ('どうぶつあつまれパック', 'うさぎやしばいぬ、パンダなどみぢかなどうぶつたちがだいしゅうごうしたきほんのパック！', 10, 'seals/usagi.png', TRUE),
-('ファンシーモチーフパック', 'ハートやリボン、おほしさまなどかわいらしいデザインをあつめたおとくなパック！', 8, 'seals/heart.png', TRUE),
 ('わくわくレア＆ダイナソーパック', 'トリケラトプスやレアポーズのどうぶつたちがはいったごうかなパック！', 20, 'seals/torikeratopusu.png', TRUE);
 
 
@@ -107,30 +106,12 @@ WHERE p.name = 'どうぶつあつまれパック'
         'しば', 'ふせしば', 'ぴょんしば',
         'ねこ', 'ぴょんねこ', 'のびねこ',
         'パンダ', 'たけのこぱんだ',
-        'はむはむ', 'はむカップ'
+        'はむはむ', 'はむカップ',
+        'ハート', 'くも', 'チューリップ', 'リボン', 'スター'
     );
 
 
--- パック2: 「ファンシーモチーフパック」の排出設定
-INSERT INTO seal_packs_root_tables (seal_pack_id, seal_id, weight)
-SELECT 
-    p.id AS seal_pack_id,
-    s.id AS seal_id,
-    CASE 
-        WHEN s.rarity = 0 THEN 10.0
-        WHEN s.rarity = 1 THEN 3.0
-        ELSE 1.0
-    END AS weight
-FROM seal_packs p
-CROSS JOIN seals s
-WHERE p.name = 'ファンシーモチーフパック'
-    AND s.name IN (
-        'ハート', 'くも', 'チューリップ', 'リボン', 'スター',
-        'ハートぱんだ', 'ラッキーはむはむ'
-    );
-
-
--- パック3: 「わくわくレア＆ダイナソーパック」の排出設定
+-- パック2: 「わくわくレア＆ダイナソーパック」の排出設定
 INSERT INTO seal_packs_root_tables (seal_pack_id, seal_id, weight)
 SELECT 
     p.id AS seal_pack_id,
@@ -147,7 +128,7 @@ WHERE p.name = 'わくわくレア＆ダイナソーパック'
         'トリケラトプス', 
         'にんじんうさぎ', 'すやしば', 'ねむねこ', 
         'ささぱんだ', 'はむはむスター',
-        'スター', 'ハート'
+        'ハートぱんだ', 'ラッキーはむはむ'
     );
 
 

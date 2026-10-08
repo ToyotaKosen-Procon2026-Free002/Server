@@ -75,6 +75,7 @@ class Seal(BaseModel):
     rarity: int
     image_path: str
     owner: Optional[str] = None
+    order: int
 
 class OriginalSealRequest(BaseModel):
     name: str

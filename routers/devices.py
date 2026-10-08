@@ -3,7 +3,7 @@ import psycopg
 from auth import get_current_device, get_current_gateway, validate_and_parse_p256_pubkey, verify_comm_event_signature, verify_sos_signature
 from database.connection import get_connection, init_new_device, received_sos, update_device_status
 from database import connection
-from models import DeviceInitRequest, DeviceSeal, Gateway, GatewayInitRequest, User, Device, SuccessResponse, SosRequest, DeviceUpdateRequest
+from models import DeviceInitRequest, DeviceSeal, Gateway, GatewayInitRequest, Seal, User, Device, SuccessResponse, SosRequest, DeviceUpdateRequest
 
 
 router = APIRouter(
@@ -145,3 +145,28 @@ async def post_status_from_gateway(request: DeviceUpdateRequest, current_gateway
 
     return SuccessResponse(success=True)
 
+
+
+@router.get(
+    "/seal",
+    summary="子機がシールを取得する",
+    response_model=Seal
+)
+async def get_seal(seal_id: str, current_device: Device = Depends(get_current_device), db: psycopg.Connection = Depends(get_connection)) -> Seal:
+    """
+    子機がシールを取得する
+    """
+
+    return connection.get_seal(db, seal_id)
+
+@router.get(
+    "/seal_gateway",
+    summary="親機がシールを取得する",
+    response_model=Seal
+)
+async def get_seal_gateway(seal_id: str, current_gateway: Gateway = Depends(get_current_gateway), db: psycopg.Connection = Depends(get_connection)) -> Seal:
+    """
+    親機がシールを取得する
+    """
+
+    return connection.get_seal(db, seal_id)

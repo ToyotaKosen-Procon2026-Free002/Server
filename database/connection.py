@@ -660,7 +660,8 @@ def get_seals(db: psycopg.Connection) -> list[Seal]:
                 description,
                 rarity,
                 image_path,
-                owner
+                owner,
+                order
             FROM seals;
             """
         )
@@ -673,6 +674,7 @@ def get_seals(db: psycopg.Connection) -> list[Seal]:
             description=row["description"],
             rarity=row["rarity"],
             image_path=row["image_path"],
+            order=row["order"],
             owner=str(row["owner"]) if row["owner"] is not None else None
         )
         for row in rows
@@ -1149,6 +1151,7 @@ def play_seal_pack(db: psycopg.Connection, device: Device, pack_id: str, count: 
                 s.description,
                 s.rarity,
                 s.image_path,
+                s."order",
                 rt.weight
             FROM seal_packs_root_tables rt
             JOIN seals s ON rt.seal_id = s.id
@@ -1181,6 +1184,7 @@ def play_seal_pack(db: psycopg.Connection, device: Device, pack_id: str, count: 
                 name=c["name"],
                 description=c["description"],
                 rarity=c["rarity"],
+                order=c["order"],
                 image_path=c["image_path"],
             )
             for c in candidates
@@ -1236,7 +1240,7 @@ def add_original_seal(db: psycopg.Connection, request: OriginalSealRequest, rela
             """
             INSERT INTO seals (name, description, rarity, image_path, owner)
             VALUES (%s, %s, %s, %s, %s)
-            RETURNING id, name, description, rarity, image_path, owner;
+            RETURNING id, name, description, rarity, image_path, owner, "order";
             """,
             (request.name, request.description, request.rarity, relative_image_path, request.owner)
         )
@@ -1250,6 +1254,7 @@ def add_original_seal(db: psycopg.Connection, request: OriginalSealRequest, rela
             description=new_seal["description"],
             rarity=new_seal["rarity"],
             image_path=new_seal["image_path"],
+            order=new_seal["order"],
             owner=str(new_seal["owner"]) if new_seal["owner"] is not None else None
         )
     else:
@@ -1269,7 +1274,8 @@ def get_original_seals(db: psycopg.Connection, gateway_id: str) -> list[Seal]:
                 description, 
                 rarity, 
                 image_path, 
-                owner 
+                owner,
+                "order"
             FROM seals 
             WHERE owner = %s
             ORDER BY "order" ASC, name ASC;
@@ -1285,6 +1291,7 @@ def get_original_seals(db: psycopg.Connection, gateway_id: str) -> list[Seal]:
             description=row["description"],
             rarity=row["rarity"],
             image_path=row["image_path"],
+            order=row["order"],
             owner=str(row["owner"]) if row["owner"] is not None else None,
         )
         for row in rows
@@ -1381,7 +1388,8 @@ def get_device_seal_book(db: psycopg.Connection, device_id: str) -> list[Seal]:
                 s.description,
                 s.rarity,
                 s.image_path,
-                s.owner
+                s.owner,
+                s."order"
             FROM device_seal_book dsb
             JOIN seals s ON dsb.seal_id = s.id
             WHERE dsb.device_id = %s
@@ -1399,6 +1407,48 @@ def get_device_seal_book(db: psycopg.Connection, device_id: str) -> list[Seal]:
             rarity=row["rarity"],
             image_path=row["image_path"],
             owner=str(row["owner"]) if row["owner"] is not None else None,
+            order=row["order"]
         )
         for row in rows
     ]
+
+
+def get_seal(db: psycopg.Connection, seal_id: str) -> Seal:
+    """
+    指定されたシールの情報を返す関数
+    """
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT 
+                s.id,
+                s.name,
+                s.description,
+                s.rarity,
+                r.name AS rarity_name,
+                s.image_path,
+                s."order",
+                s.owner
+            FROM seals s
+            JOIN seal_rarities r ON s.rarity = r.id
+            WHERE s.id = %s;
+            """,
+            (seal_id,)
+        )
+        seal = cur.fetchone()
+
+        if seal is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="指定されたシールが見つかりません。"
+            )
+
+    return Seal(
+        id=str(seal["id"]),
+        name=seal["name"],
+        description=seal["description"],
+        rarity=seal["rarity"],  # レアリティ名 ('N', 'R', 'O') を使いたい場合は seal["rarity_name"]
+        image_path=seal["image_path"],
+        order=seal["order"],
+        owner=str(seal["owner"]) if seal["owner"] else None
+    )

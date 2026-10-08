@@ -120,3 +120,28 @@ async def get_gateway_info(current_gateway: Gateway = Depends(get_current_gatewa
 )
 async def get_device_info(current_device: Device = Depends(get_current_device)) -> Device:
     return current_device
+
+
+@router.post(
+    "/status_from_gateway",
+    summary="親機が中継して子機のすれ違いログなどをサーバーに送る",
+    response_model=SuccessResponse
+)
+async def post_status_from_gateway(request: DeviceUpdateRequest, current_gateway: Gateway = Depends(get_current_gateway), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
+    """
+    親機が中継して子機のすれ違いログなどをサーバーに送る
+    """
+
+    origin_device = connection.get_device(db, request.device_id)
+    if origin_device is None: 
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"送信元デバイス '{request.device_id}' は見つかりませんでした。")
+
+    for comm in request.nearby_communications:
+        if comm.my_id != request.device_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"my_id '{comm.my_id}' はdevice_id '{request.device_id}' と一致しません。")
+        verify_comm_event_signature(origin_device.public_key, comm)
+
+    update_device_status(db, request, origin_device)
+
+    return SuccessResponse(success=True)
+

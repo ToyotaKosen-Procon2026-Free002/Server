@@ -671,7 +671,7 @@ def get_seals(db: psycopg.Connection) -> list[Seal]:
                 rarity,
                 image_path,
                 owner,
-                order
+                "order"
             FROM seals;
             """
         )

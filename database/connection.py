@@ -322,6 +322,20 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
             opponent_device_id = None if comm.partner_is_gateway else comm.partner_id
             gateway_id = comm.partner_id if comm.partner_is_gateway else None
 
+            # --- 追加: 相手(子機または親機)がDBに存在するかチェック ---
+            if opponent_device_id:
+                cur.execute("SELECT 1 FROM devices WHERE id = %s;", (opponent_device_id,))
+                if cur.fetchone() is None:
+                    # DBに存在しない子機との遭遇ログは無視してスキップ
+                    continue
+
+            if gateway_id:
+                cur.execute("SELECT 1 FROM gateways WHERE id = %s;", (gateway_id,))
+                if cur.fetchone() is None:
+                    # DBに存在しない親機との遭遇ログは無視してスキップ
+                    continue
+            # -----------------------------------------------------
+
             cur.execute(
                 """
                 INSERT INTO encounters (request_id, device_id, opponent_device_id, gateway_id, detected_at, send_seal_id, receive_seal_id)
@@ -370,7 +384,7 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
                         SET coins = coins + 5
                         WHERE id = %s;
                         """,
-                        (origin_device.id)
+                        (origin_device.id,) # ★注意: タプルにするためカンマが必要 (origin_device.id,)
                     )
 
                     cur.execute(
@@ -382,13 +396,16 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
                         (origin_device.id, comm.receive_seal_id)
                     )
 
+                # ミッション進捗の更新 (IDは origin_device.id を使用するのが安全)
+                target_device_id = origin_device.id
+
                 if comm.partner_is_gateway:
-                    increment_mission_progress(db, comm.my_id, "ENCOUNTER_GATEWAY")
+                    increment_mission_progress(db, target_device_id, "ENCOUNTER_GATEWAY")
                 else:
-                    increment_mission_progress(db, comm.my_id, "ENCOUNTER_DEVICE")
+                    increment_mission_progress(db, target_device_id, "ENCOUNTER_DEVICE")
 
                 if comm.receive_seal_id:
-                    increment_mission_progress(db, comm.my_id, "GET_SEAL")
+                    increment_mission_progress(db, target_device_id, "GET_SEAL")
                 
         db.commit()
 

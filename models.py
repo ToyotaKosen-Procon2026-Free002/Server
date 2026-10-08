@@ -188,7 +188,7 @@ class GetSosRequest(BaseModel):
 
 
 class DeviceUpdateRequest(BaseModel):
-    device_id: str
+    device_id: str = Field(..., description="情報元の子機のIDを載せる")
     request_id: str
     timestamp: datetime
     nearby_communications: list[NearbyCommunication]

@@ -318,6 +318,16 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
     """
 
     with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            UPDATE devices
+            SET battery = %s,
+                last_timestamp = %s
+            WHERE id = %s;
+            """,
+            (request.battery, request.timestamp, origin_device.id)
+        )
+
         for comm in request.nearby_communications:
             opponent_device_id = None if comm.partner_is_gateway else comm.partner_id
             gateway_id = comm.partner_id if comm.partner_is_gateway else None

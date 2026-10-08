@@ -7,7 +7,7 @@ from config import settings
 from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateRequest, Gateway, GatewayInfoPatchRequest, GatewayInitRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, OriginalSealRequest, PatchDeviceSealRequest, Seal, SealPackResponse, SealPackRootTable, SosInfo, SosReceiver, SosRequest, User, UpdateUser, WeeklyMissionItem
 from typing import Optional
 from notify import send_sos_notification
-from auth import validate_and_parse_p256_pubkey
+import auth
 
 def get_connection():
     connection = psycopg.connect(
@@ -179,7 +179,7 @@ def init_new_gateway(db: psycopg.Connection, request: GatewayInitRequest) -> Gat
                 ST_Y(location::geometry) AS latitude,
                 ST_X(location::geometry) AS longitude;
             """,
-            (request.id, validate_and_parse_p256_pubkey(request.public_key), request.name)
+            (request.id, auth.validate_and_parse_p256_pubkey(request.public_key), request.name)
         )
         row = cur.fetchone()
         db.commit()

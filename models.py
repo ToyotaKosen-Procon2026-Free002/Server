@@ -91,7 +91,7 @@ class DeviceInfoPatchRequest(BaseModel):
 class GatewayInfoPatchRequest(BaseModel):
     device_id: str
     name: str
-    distribute_seal_id: str
+    distribute_seal_id: Optional[str] = None
     latitude: float
     longitude: float
 

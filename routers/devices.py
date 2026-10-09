@@ -4,7 +4,9 @@ from auth import get_current_device, get_current_gateway, validate_and_parse_p25
 from database.connection import get_connection, init_new_device, received_sos, update_device_status
 from database import connection
 from models import DeviceInitRequest, DeviceSeal, Gateway, GatewayInitRequest, Seal, User, Device, SuccessResponse, SosRequest, DeviceUpdateRequest
+from logging import getLogger
 
+logger = getLogger(__name__)
 
 router = APIRouter(
     prefix="/devices",
@@ -89,6 +91,8 @@ async def sos_from_gateway(request: SosRequest, current_gateway: Gateway = Depen
     verify_sos_signature(child_device.public_key, request)
 
     received_sos(db, request, child_device)
+
+    logger.info("SOS送信が正常に終了しました")
 
     return SuccessResponse(success=True)
 

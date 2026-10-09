@@ -92,7 +92,7 @@ async def sos_from_gateway(request: SosRequest, current_gateway: Gateway = Depen
 
     received_sos(db, request, child_device)
 
-    logger.info("SOS送信が正常に終了しました")
+    logger.error("SOS送信が正常に終了しました")
 
     return SuccessResponse(success=True)
 

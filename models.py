@@ -213,7 +213,7 @@ class SosInfo(BaseModel):
 
 """
 署名対象文字列
-{event_id}|{child_id}|{gateway_id}|{trigger_timestamp_unix}|{receive_timestamp_unix}
+{event_id}|{child_id}|{trigger_timestamp_unix}
 """
 class SosRequest(BaseModel):
     event_id: str

@@ -175,7 +175,6 @@ def build_sos_message(request: SosRequest) -> bytes:
     """
     event_id = request.event_id.lower()
     child_id = request.child_id.lower()
-    gateway_id = request.gateway_id.lower()
 
     t_trigger = request.trigger_timestamp
     if t_trigger.tzinfo is None:
@@ -185,9 +184,8 @@ def build_sos_message(request: SosRequest) -> bytes:
     t_receive = request.receive_timestamp
     if t_receive.tzinfo is None:
         t_receive = t_receive.replace(tzinfo=timezone.utc)
-    receive_unix = str(int(t_receive.timestamp()))
 
-    raw_str = f"{event_id}|{child_id}|{gateway_id}|{trigger_unix}|{receive_unix}"
+    raw_str = f"{event_id}|{child_id}|{trigger_unix}"
     return raw_str.encode("utf-8")
 
 

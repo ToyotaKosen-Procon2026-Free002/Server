@@ -74,7 +74,7 @@ async def sos(request: SosRequest, current_device: Device = Depends(get_current_
 
 
 @router.post(
-    "/sos",
+    "/sos_gateway",
     response_model=SuccessResponse,
     summary="親機が中継してSOSを送信する"
 )

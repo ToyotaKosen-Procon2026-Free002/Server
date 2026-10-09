@@ -11,8 +11,10 @@ from models import ClaimRewardRequest, ClaimRewardResponse, Device, DeviceInfoPa
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
-
+from logging import getLogger
 from notify import send_sos_notification
+
+logger = getLogger(__name__)
 
 router = APIRouter(
     prefix="/users"
@@ -524,6 +526,7 @@ async def test_notify(db: psycopg.Connection = Depends(get_connection)) -> Succe
     # 2. FCMでテスト通知を送信
     test_device_name = "テスト用デバイス"
     is_sent = send_sos_notification(tokens=tokens, device_name=test_device_name)
+    logger.info(tokens)
 
     if not is_sent:
         raise HTTPException(

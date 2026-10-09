@@ -341,12 +341,14 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
                     cur.execute("SELECT 1 FROM devices WHERE id = %s;", (opponent_device_id,))
                     if cur.fetchone() is None:
                         # DBに存在しない子機との遭遇ログは無視してスキップ
+                        logger.info("登録されていない子機のすれ違いログの保存をスキップしました。")
                         continue
 
                 if gateway_id:
                     cur.execute("SELECT 1 FROM gateways WHERE id = %s;", (gateway_id,))
                     if cur.fetchone() is None:
                         # DBに存在しない親機との遭遇ログは無視してスキップ
+                        logger.info("登録されていない親機のすれ違いログの保存をスキップしました。")
                         continue
                 # -----------------------------------------------------
 
@@ -398,7 +400,7 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
                             SET coins = coins + 5
                             WHERE id = %s;
                             """,
-                            (origin_device.id,) # ★注意: タプルにするためカンマが必要 (origin_device.id,)
+                            (origin_device.id,)
                         )
 
                         cur.execute(
@@ -410,7 +412,6 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
                             (origin_device.id, comm.receive_seal_id)
                         )
 
-                    # ミッション進捗の更新 (IDは origin_device.id を使用するのが安全)
                     target_device_id = origin_device.id
 
                     if comm.partner_is_gateway:

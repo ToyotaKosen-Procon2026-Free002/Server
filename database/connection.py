@@ -8,6 +8,9 @@ from models import Device, DeviceInfoPatchRequest, DeviceSeal, DeviceUpdateReque
 from typing import Optional
 from notify import send_sos_notification
 import auth
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 def get_connection():
     connection = psycopg.connect(
@@ -329,93 +332,96 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
         )
 
         for comm in request.nearby_communications:
-            opponent_device_id = None if comm.partner_is_gateway else comm.partner_id
-            gateway_id = comm.partner_id if comm.partner_is_gateway else None
+            try:
+                opponent_device_id = None if comm.partner_is_gateway else comm.partner_id
+                gateway_id = comm.partner_id if comm.partner_is_gateway else None
 
-            # --- 追加: 相手(子機または親機)がDBに存在するかチェック ---
-            if opponent_device_id:
-                cur.execute("SELECT 1 FROM devices WHERE id = %s;", (opponent_device_id,))
-                if cur.fetchone() is None:
-                    # DBに存在しない子機との遭遇ログは無視してスキップ
-                    continue
+                # --- 追加: 相手(子機または親機)がDBに存在するかチェック ---
+                if opponent_device_id:
+                    cur.execute("SELECT 1 FROM devices WHERE id = %s;", (opponent_device_id,))
+                    if cur.fetchone() is None:
+                        # DBに存在しない子機との遭遇ログは無視してスキップ
+                        continue
 
-            if gateway_id:
-                cur.execute("SELECT 1 FROM gateways WHERE id = %s;", (gateway_id,))
-                if cur.fetchone() is None:
-                    # DBに存在しない親機との遭遇ログは無視してスキップ
-                    continue
-            # -----------------------------------------------------
+                if gateway_id:
+                    cur.execute("SELECT 1 FROM gateways WHERE id = %s;", (gateway_id,))
+                    if cur.fetchone() is None:
+                        # DBに存在しない親機との遭遇ログは無視してスキップ
+                        continue
+                # -----------------------------------------------------
 
-            cur.execute(
-                """
-                INSERT INTO encounters (request_id, device_id, opponent_device_id, gateway_id, detected_at, send_seal_id, receive_seal_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (request_id) DO NOTHING
-                RETURNING *;
-                """,
-                (comm.event_id, origin_device.id, opponent_device_id, gateway_id, comm.timestamp, comm.send_seal_id, comm.receive_seal_id)
-            )
-            inserted = cur.fetchone()
+                cur.execute(
+                    """
+                    INSERT INTO encounters (request_id, device_id, opponent_device_id, gateway_id, detected_at, send_seal_id, receive_seal_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (request_id) DO NOTHING
+                    RETURNING *;
+                    """,
+                    (comm.event_id, origin_device.id, opponent_device_id, gateway_id, comm.timestamp, comm.send_seal_id, comm.receive_seal_id)
+                )
+                inserted = cur.fetchone()
 
-            if inserted is not None:
-                if comm.send_seal_id:
-                    cur.execute(
-                        """
-                        DELETE FROM device_seals
-                        WHERE id = (
-                            SELECT id FROM device_seals
-                            WHERE device_id = %s AND seal_id = %s
-                            ORDER BY
-                                CASE status_id
-                                    WHEN 2 THEN 1
-                                    WHEN 0 THEN 2
-                                    WHEN 1 THEN 3
-                                    ELSE 4
-                                END,
-                                id
-                            LIMIT 1
-                        );
-                        """,
-                        (origin_device.id, comm.send_seal_id)
-                    )
+                if inserted is not None:
+                    if comm.send_seal_id:
+                        cur.execute(
+                            """
+                            DELETE FROM device_seals
+                            WHERE id = (
+                                SELECT id FROM device_seals
+                                WHERE device_id = %s AND seal_id = %s
+                                ORDER BY
+                                    CASE status_id
+                                        WHEN 2 THEN 1
+                                        WHEN 0 THEN 2
+                                        WHEN 1 THEN 3
+                                        ELSE 4
+                                    END,
+                                    id
+                                LIMIT 1
+                            );
+                            """,
+                            (origin_device.id, comm.send_seal_id)
+                        )
 
-                if comm.receive_seal_id:
-                    cur.execute(
-                        """
-                        INSERT INTO device_seals (device_id, seal_id, status_id)
-                        VALUES (%s, %s, 0);
-                        """,
-                        (origin_device.id, comm.receive_seal_id)
-                    )
+                    if comm.receive_seal_id:
+                        cur.execute(
+                            """
+                            INSERT INTO device_seals (device_id, seal_id, status_id)
+                            VALUES (%s, %s, 0);
+                            """,
+                            (origin_device.id, comm.receive_seal_id)
+                        )
 
-                    cur.execute(
-                        """
-                        UPDATE devices
-                        SET coins = coins + 5
-                        WHERE id = %s;
-                        """,
-                        (origin_device.id,) # ★注意: タプルにするためカンマが必要 (origin_device.id,)
-                    )
+                        cur.execute(
+                            """
+                            UPDATE devices
+                            SET coins = coins + 5
+                            WHERE id = %s;
+                            """,
+                            (origin_device.id,) # ★注意: タプルにするためカンマが必要 (origin_device.id,)
+                        )
 
-                    cur.execute(
-                        """
-                        INSERT INTO device_seal_book (device_id, seal_id)
-                        VALUES (%s, %s)
-                        ON CONFLICT (device_id, seal_id) DO NOTHING;
-                        """,
-                        (origin_device.id, comm.receive_seal_id)
-                    )
+                        cur.execute(
+                            """
+                            INSERT INTO device_seal_book (device_id, seal_id)
+                            VALUES (%s, %s)
+                            ON CONFLICT (device_id, seal_id) DO NOTHING;
+                            """,
+                            (origin_device.id, comm.receive_seal_id)
+                        )
 
-                # ミッション進捗の更新 (IDは origin_device.id を使用するのが安全)
-                target_device_id = origin_device.id
+                    # ミッション進捗の更新 (IDは origin_device.id を使用するのが安全)
+                    target_device_id = origin_device.id
 
-                if comm.partner_is_gateway:
-                    increment_mission_progress(db, target_device_id, "ENCOUNTER_GATEWAY")
-                else:
-                    increment_mission_progress(db, target_device_id, "ENCOUNTER_DEVICE")
+                    if comm.partner_is_gateway:
+                        increment_mission_progress(db, target_device_id, "ENCOUNTER_GATEWAY")
+                    else:
+                        increment_mission_progress(db, target_device_id, "ENCOUNTER_DEVICE")
 
-                if comm.receive_seal_id:
-                    increment_mission_progress(db, target_device_id, "GET_SEAL")
+                    if comm.receive_seal_id:
+                        increment_mission_progress(db, target_device_id, "GET_SEAL")
+            except Exception as e:
+                logger.error(f"すれ違いログの保存に失敗しました。{str(e)}")
                 
         db.commit()
 

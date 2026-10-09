@@ -4,14 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from routers import users, devices
 from database.connection import get_connection
-from logging import getLogger, StreamHandler, DEBUG
+from logging import basicConfig, DEBUG
 
-logger = getLogger(__name__)
-handler = StreamHandler()
-handler.setLevel(DEBUG)
-logger.setLevel(DEBUG)
-logger.addHandler(handler)
-logger.propagate = False
+basicConfig(level=DEBUG)
 
 app = FastAPI(
     title="Coco Seal API",

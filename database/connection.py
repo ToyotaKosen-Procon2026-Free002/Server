@@ -442,6 +442,7 @@ def get_device_notify_tokens(db: psycopg.Connection, device: Device) -> list[str
             tokens = [row["notify_token"] for row in token_rows]
         return tokens
     else:
+        logger.info("SOS送信用のトークンが一つも見つかりませんでした。")
         return []
 
 

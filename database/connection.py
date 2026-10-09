@@ -422,7 +422,7 @@ def update_device_status(db: psycopg.Connection, request: DeviceUpdateRequest, o
                     if comm.receive_seal_id:
                         increment_mission_progress(db, target_device_id, "GET_SEAL")
             except Exception as e:
-                logger.error(f"すれ違いログの保存に失敗しました。{str(e)}")
+                logger.error(f"すれ違いログの保存に失敗しました。{str(e)}: \n {str(comm)}")
                 
         db.commit()
 

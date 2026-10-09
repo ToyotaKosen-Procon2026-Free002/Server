@@ -5,11 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from typing import Annotated
 
 from fastapi.responses import FileResponse
+from psycopg.rows import dict_row
 from auth import get_current_user
 from models import ClaimRewardRequest, ClaimRewardResponse, Device, DeviceInfoPatchRequest, DeviceSeal, Gateway, GatewayInfoPatchRequest, GetNearbyCommunicationsRequest, GetSosRequest, NearbyCommunication, OriginalSealRequest, PatchDeviceSealRequest, Seal, SealPackResponse, SosInfo, SuccessResponse, User, UpdateUser, WeeklyMissionItem
 from database.connection import get_connection, update_user
 from database import connection
 import psycopg
+
+from notify import send_sos_notification
 
 router = APIRouter(
     prefix="/users"
@@ -492,3 +495,43 @@ async def get_device_seal_book(device_id: str, current_user = Depends(get_curren
         )
 
     return connection.get_device_seal_book(db, device_id)
+
+
+@router.post(
+    "/notify_test",
+    summary="テストで通知を送信する",
+    tags=["Notify"],
+    response_model=SuccessResponse
+)
+async def test_notify(db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
+    """
+    テストで通知を送信する
+    """
+    with db.cursor(row_factory=dict_row) as cur:
+        # 1. DBに登録されている全ての通知用トークンを取得
+        cur.execute("SELECT notify_token FROM user_notify_token;")
+        rows = cur.fetchall()
+
+    tokens = [row["notify_token"] for row in rows]
+
+    # トークンが1つも登録されていない場合
+    if not tokens:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="送信対象の通知トークンが登録されていません。"
+        )
+
+    # 2. FCMでテスト通知を送信
+    test_device_name = "テスト用デバイス"
+    is_sent = send_sos_notification(tokens=tokens, device_name=test_device_name)
+
+    if not is_sent:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="プッシュ通知の送信に失敗しました。"
+        )
+
+    return SuccessResponse(
+        success=True,
+        description="テスト通知を送信しました。"
+    )

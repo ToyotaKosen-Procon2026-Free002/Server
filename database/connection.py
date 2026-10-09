@@ -465,6 +465,7 @@ def received_sos(db: psycopg.Connection, request: SosRequest, child_device: Devi
         sos_row = cur.fetchone()
 
         if sos_row:
+            logger.info("SOSイベントが正常にデータベースに追加されました。")
             sos_id = sos_row["id"]
             is_notified = sos_row["notified"]
 
@@ -476,6 +477,8 @@ def received_sos(db: psycopg.Connection, request: SosRequest, child_device: Devi
                 (sos_id, request.gateway_id, request.receive_timestamp)
             )
 
+            logger.info(f"is_notified: {is_notified}, owner: {child_device.owner}")
+            
             if not is_notified and child_device.owner:
                 tokens = get_device_notify_tokens(db, child_device)
                 if tokens:
@@ -492,6 +495,7 @@ def received_sos(db: psycopg.Connection, request: SosRequest, child_device: Devi
                             )
                     except Exception as e:
                         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="SOSの送信に失敗しました。: [{sos_id}] {e}")
+        else: logger.warning("SOSイベントがデータベースに追加されませんでした。")
 
         db.commit()
 

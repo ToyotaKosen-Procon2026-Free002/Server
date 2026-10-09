@@ -73,6 +73,26 @@ async def sos(request: SosRequest, current_device: Device = Depends(get_current_
     return SuccessResponse(success=True)
 
 
+@router.post(
+    "/sos",
+    response_model=SuccessResponse,
+    summary="親機が中継してSOSを送信する"
+)
+async def sos_from_gateway(request: SosRequest, current_gateway: Gateway = Depends(get_current_gateway), db: psycopg.Connection = Depends(get_connection)) -> SuccessResponse:
+    """
+    親機が中継してSOSを送信する
+    """
+
+    child_device = connection.get_device(db, request.child_id)
+    if child_device is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"子機 '{request.child_id}' が見つかりません。")
+    verify_sos_signature(child_device.public_key, request)
+
+    received_sos(db, request, child_device)
+
+    return SuccessResponse(success=True)
+
+
 @router.get(
     "/trading_seals",
     summary="デバイスが交換に出されているシールを取得する"
